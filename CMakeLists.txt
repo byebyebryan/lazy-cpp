@@ -44,6 +44,10 @@ target_compile_features(lazy-cpp INTERFACE cxx_std_17)
 # Add examples subdirectory
 add_subdirectory(examples)
 
+# Add tests subdirectory
+enable_testing()
+add_subdirectory(tests)
+
 # Installation rules
 include(GNUInstallDirs)
 

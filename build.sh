@@ -10,6 +10,7 @@ BUILD_TYPE="Release"
 CLEAN=false
 FORMAT=false
 RUN_EXAMPLES=false
+RUN_TESTS=false
 VERBOSE=false
 BUILD_DIR="build"
 
@@ -39,6 +40,7 @@ OPTIONS:
     -d, --debug         Build in Debug mode (default: Release)
     -f, --format        Run clang-format on all source files
     -r, --run           Run examples after building
+    -t, --test          Run tests after building
     -v, --verbose       Verbose output
 
 EXAMPLES:
@@ -46,7 +48,9 @@ EXAMPLES:
     $0 -c -d            # Clean build in Debug mode
     $0 -f               # Format code only
     $0 -c -r            # Clean build and run examples
-    $0 --format --clean --debug --run  # Full development cycle
+    $0 -t               # Build and run tests
+    $0 -c -t -r         # Clean build, run tests and examples
+    $0 --format --clean --debug --test --run  # Full development cycle
 
 EOF
 }
@@ -142,6 +146,24 @@ run_examples() {
     print_success "Examples completed!"
 }
 
+# Function to run tests
+run_tests() {
+    print_info "Running tests..."
+
+    if [ ! -f "$BUILD_DIR/tests/serialization/serialization-tests" ]; then
+        print_error "Test executable not found. Build the project first."
+        return 1
+    fi
+
+    print_info "Running serialization tests:"
+    echo "----------------------------------------"
+    cd "$BUILD_DIR"
+    ./tests/serialization/serialization-tests
+    cd ..
+    echo "----------------------------------------"
+    print_success "Tests completed!"
+}
+
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -165,6 +187,10 @@ while [[ $# -gt 0 ]]; do
             RUN_EXAMPLES=true
             shift
             ;;
+        -t|--test)
+            RUN_TESTS=true
+            shift
+            ;;
         -v|--verbose)
             VERBOSE=true
             shift
@@ -186,7 +212,7 @@ if [ "$FORMAT" = true ]; then
 fi
 
 # If only formatting was requested, exit here
-if [ "$FORMAT" = true ] && [ "$CLEAN" = false ] && [ "$RUN_EXAMPLES" = false ] && [ "$BUILD_TYPE" = "Release" ]; then
+if [ "$FORMAT" = true ] && [ "$CLEAN" = false ] && [ "$RUN_EXAMPLES" = false ] && [ "$RUN_TESTS" = false ] && [ "$BUILD_TYPE" = "Release" ]; then
     print_success "Code formatting completed. Exiting."
     exit 0
 fi
@@ -198,6 +224,11 @@ fi
 
 # Build the project
 build_project
+
+# Run tests if requested
+if [ "$RUN_TESTS" = true ]; then
+    run_tests
+fi
 
 # Run examples if requested
 if [ "$RUN_EXAMPLES" = true ]; then

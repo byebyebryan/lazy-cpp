@@ -72,7 +72,8 @@ class RapidJsonContext {
 
   NodeType getArrayElement(NodeType node, size_t index) { return &(*node)[index]; }
   NodeType addArrayElement(NodeType node) {
-    return &node->PushBack(rapidjson::Value(), getAllocator());
+    node->PushBack(rapidjson::Value(), getAllocator());
+    return &(*node)[node->Size() - 1];
   }
 
   template <typename T>

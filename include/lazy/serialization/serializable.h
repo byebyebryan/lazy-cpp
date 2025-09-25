@@ -175,8 +175,8 @@ std::vector<typename Serializable<ConcreteT, ContextT>::SerializableFieldMetadat
 //
 // Handles:
 // 1. Primitive types (int, float, string, etc.)
-// 2. Object types (Serializable-derived types)
-// 3. Array types (std::vector<T>)
+// 2. Array types (std::vector<T>)
+// 3. Object types (Serializable-derived types)
 // 4. Custom types (SERIALIZABLE_TYPE, see next section)
 // ================================================================================================
 
@@ -193,26 +193,6 @@ struct Serializer {
     auto* childNode = context.getChild(node, key);
     if (childNode) {
       *static_cast<ValueType*>(value) = context.template getValue<ValueType>(childNode);
-    }
-  }
-};
-
-// Nested types derived from Serializable
-template <typename ValueType, typename ContextType>
-struct Serializer<
-    ValueType, ContextType,
-    std::enable_if_t<std::is_base_of_v<Serializable<ValueType, ContextType>, ValueType>>> {
-  static void serialize(const void* value, ContextType& context,
-                        typename ContextType::NodeType node, const std::string& key) {
-    auto* childNode = context.addChild(node, key);
-    context.setObject(childNode);
-    static_cast<const ValueType*>(value)->serialize(context, childNode);
-  }
-  static void deserialize(void* value, ContextType& context, typename ContextType::NodeType node,
-                          const std::string& key) {
-    auto* childNode = context.getChild(node, key);
-    if (childNode && context.isObject(childNode)) {
-      static_cast<ValueType*>(value)->deserialize(context, childNode);
     }
   }
 };
@@ -239,8 +219,29 @@ struct Serializer<std::vector<ValueType>, ContextType> {
       vector.clear();
       vector.resize(context.getArraySize(childNode));
       for (size_t i = 0; i < vector.size(); ++i) {
-        Serializer<ValueType, ContextType>::deserialize(&vector[i], context, childNode, "");
+        auto* elementNode = context.getArrayElement(childNode, i);
+        Serializer<ValueType, ContextType>::deserialize(&vector[i], context, elementNode, "");
       }
+    }
+  }
+};
+
+// Nested types derived from Serializable
+template <typename ValueType, typename ContextType>
+struct Serializer<
+    ValueType, ContextType,
+    std::enable_if_t<std::is_base_of_v<Serializable<ValueType, ContextType>, ValueType>>> {
+  static void serialize(const void* value, ContextType& context,
+                        typename ContextType::NodeType node, const std::string& key) {
+    auto* childNode = context.addChild(node, key);
+    context.setObject(childNode);
+    static_cast<const ValueType*>(value)->serialize(context, childNode);
+  }
+  static void deserialize(void* value, ContextType& context, typename ContextType::NodeType node,
+                          const std::string& key) {
+    auto* childNode = context.getChild(node, key);
+    if (childNode && context.isObject(childNode)) {
+      static_cast<ValueType*>(value)->deserialize(context, childNode);
     }
   }
 };
