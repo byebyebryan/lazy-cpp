@@ -1,8 +1,7 @@
 #pragma once
 
-#include <yaml-cpp/yaml.h>
-
 #include <deque>
+#include <fkYAML/node.hpp>
 #include <istream>
 #include <ostream>
 #include <string>
@@ -14,33 +13,31 @@ namespace lazy {
 namespace serialization {
 
 /**
- * YAML serialization adapter implementation using yaml-cpp.
+ * YAML serialization adapter implementation using fkYAML.
  * Provides the AdapterType interface required by Serializable.
  */
 class YamlAdapter {
  private:
-  YAML::Node document_;
+  fkyaml::node document_;
   std::ostream* writeStream_ = nullptr;  // For serialization
-  // Simple node storage to avoid pointer invalidation issues
-  // Using deque instead of vector to avoid pointer invalidation on growth
-  mutable std::deque<YAML::Node> nodeStorage_;
 
  public:
-  using NodeType = YAML::Node*;
+  using NodeType = fkyaml::node*;
 
-  YamlAdapter() { document_ = YAML::Node(YAML::NodeType::Map); }
+  YamlAdapter() { document_ = fkyaml::node::mapping(); }
 
-  explicit YamlAdapter(std::istream& stream) { document_ = YAML::Load(stream); }
+  explicit YamlAdapter(std::istream& stream) { document_ = fkyaml::node::deserialize(stream); }
 
   // For serialization - store stream reference
   explicit YamlAdapter(std::ostream& stream) : writeStream_(&stream) {
-    document_ = YAML::Node(YAML::NodeType::Map);
+    document_ = fkyaml::node::mapping();
   }
 
   // Clean finish methods for symmetric API
   void finishSerialization() const {
     if (writeStream_) {
-      *writeStream_ << document_;
+      std::string yaml_string = fkyaml::node::serialize(document_);
+      *writeStream_ << yaml_string;
     }
   }
 
@@ -55,10 +52,8 @@ class YamlAdapter {
     if (key.empty()) {
       return node;
     }
-    if (node && (*node)[key]) {
-      // Store child node in our storage and return pointer to it
-      nodeStorage_.push_back((*node)[key]);
-      return &nodeStorage_.back();
+    if (node && node->is_mapping() && node->contains(key)) {
+      return &((*node)[key]);
     }
     return nullptr;
   }
@@ -68,37 +63,32 @@ class YamlAdapter {
     if (key.empty()) {
       return node;
     }
-    (*node)[key] = YAML::Node();
-    // Store child node in our storage and return pointer to it
-    nodeStorage_.push_back((*node)[key]);
-    return &nodeStorage_.back();
+    (*node)[key] = fkyaml::node();
+    return &((*node)[key]);
   }
 
-  bool isObject(NodeType node) { return node && node->IsMap(); }
-  void setObject(NodeType node) { *node = YAML::Node(YAML::NodeType::Map); }
+  bool isObject(NodeType node) { return node && node->is_mapping(); }
+  void setObject(NodeType node) { *node = fkyaml::node::mapping(); }
 
-  bool isArray(NodeType node) { return node && node->IsSequence(); }
+  bool isArray(NodeType node) { return node && node->is_sequence(); }
   void setArray(NodeType node, size_t size) {
-    *node = YAML::Node(YAML::NodeType::Sequence);
+    *node = fkyaml::node::sequence();
     // YAML sequences grow dynamically, no need to pre-reserve
   }
 
   size_t getArraySize(NodeType node) { return node ? node->size() : 0; }
 
   NodeType getArrayElement(NodeType node, size_t index) {
-    if (node && index < node->size()) {
-      // Store array element in our storage and return pointer to it
-      nodeStorage_.push_back((*node)[index]);
-      return &nodeStorage_.back();
+    if (node && node->is_sequence() && index < node->size()) {
+      return &((*node)[index]);
     }
     return nullptr;
   }
 
   NodeType addArrayElement(NodeType node) {
-    node->push_back(YAML::Node());
-    // Store array element in our storage and return pointer to it
-    nodeStorage_.push_back((*node)[node->size() - 1]);
-    return &nodeStorage_.back();
+    auto& seq = node->get_value_ref<fkyaml::node::sequence_type&>();
+    seq.emplace_back();
+    return &seq.back();
   }
 
   template <typename T>
@@ -106,8 +96,8 @@ class YamlAdapter {
     if (!node) return T{};
 
     try {
-      return node->as<T>();
-    } catch (const YAML::Exception&) {
+      return node->get_value<T>();
+    } catch (const fkyaml::exception&) {
       return T{};  // Return default value if conversion fails
     }
   }

@@ -13,6 +13,7 @@ RUN_EXAMPLES=false
 RUN_TESTS=false
 VERBOSE=false
 BUILD_DIR="build"
+GENERATOR="Ninja"
 
 # Colors for output
 RED='\033[0;31m'
@@ -39,6 +40,7 @@ OPTIONS:
     -c, --clean         Clean build directory before building
     -d, --debug         Build in Debug mode (default: Release)
     -f, --format        Run clang-format on all source files
+    -g, --generator <G> Use the specified CMake generator (e.g., "Ninja")
     -r, --run           Run examples after building
     -t, --test          Run tests after building
     -v, --verbose       Verbose output
@@ -112,15 +114,11 @@ build_project() {
     fi
     
     print_info "Configuring with CMake..."
-    cmake -DCMAKE_BUILD_TYPE="$BUILD_TYPE" $CMAKE_ARGS ..
+    cmake -G "$GENERATOR" -DCMAKE_BUILD_TYPE="$BUILD_TYPE" $CMAKE_ARGS ..
     
     # Build
     print_info "Compiling..."
-    if [ "$VERBOSE" = true ]; then
-        make VERBOSE=1
-    else
-        make -j$(nproc)
-    fi
+    cmake --build . -- -j$(nproc)
     
     # Note: compile_commands.json stays in build/ for cleaner project structure
     
@@ -182,6 +180,10 @@ while [[ $# -gt 0 ]]; do
         -f|--format)
             FORMAT=true
             shift
+            ;;
+        -g|--generator)
+            GENERATOR="$2"
+            shift 2
             ;;
         -r|--run)
             RUN_EXAMPLES=true
