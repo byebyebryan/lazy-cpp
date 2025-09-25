@@ -15,7 +15,10 @@
 namespace lazy {
 namespace serialization {
 
-// JSON serialization context using RapidJSON
+/**
+ * JSON serialization context implementation using RapidJSON.
+ * Provides the ContextType interface required by Serializable.
+ */
 class RapidJsonContext {
  public:
   using NodeType = rapidjson::Value*;
@@ -37,6 +40,7 @@ class RapidJsonContext {
 
   NodeType root() { return &document_; }
   NodeType getChild(NodeType node, const std::string& key) {
+    // empty key means the node itself
     if (key.empty()) {
       return node;
     }
@@ -46,6 +50,7 @@ class RapidJsonContext {
     return nullptr;
   }
   NodeType addChild(NodeType node, const std::string& key) {
+    // empty key means the node itself
     if (key.empty()) {
       return node;
     }
@@ -72,6 +77,7 @@ class RapidJsonContext {
 
   template <typename T>
   T getValue(NodeType node) {
+    // rapidjson needs special handling for std::string
     if constexpr (std::is_same_v<T, std::string>) {
       return std::string(node->GetString());
     } else {
@@ -92,11 +98,13 @@ class RapidJsonContext {
   rapidjson::Document document_;
 };
 
+// Convenience alias for JSON serializable types
 template <typename T>
 using JsonSerializable = Serializable<T, RapidJsonContext>;
 
 }  // namespace serialization
 
+// Global alias for easier access
 template <typename T>
 using JsonSerializable = serialization::JsonSerializable<T>;
 
