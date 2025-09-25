@@ -122,7 +122,7 @@ TEST_F(TextContextTest, StreamRoundTrip) {
   // Since this fixture uses default context (no stream), we need to create new context for
   // serialization
   std::stringstream ss;
-  lazy::serialization::TextContext writeContext(ss);
+  lazy::serialization::TextContext writeContext(static_cast<std::ostream&>(ss));
   auto writeRoot = writeContext.root();
   auto writeKey1Node = writeContext.addChild(writeRoot, "key1");
   auto writeKey2Node = writeContext.addChild(writeRoot, "key2");

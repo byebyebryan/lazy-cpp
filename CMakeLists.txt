@@ -19,7 +19,7 @@ include_directories(include)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(RapidJSON REQUIRED RapidJSON)
 
-# If pkg-config doesn't find RapidJSON, try using FetchContent
+# If RapidJSON isn't found, try using FetchContent
 if(NOT RapidJSON_FOUND)
   include(FetchContent)
 
@@ -34,12 +34,36 @@ if(NOT RapidJSON_FOUND)
   set(RapidJSON_INCLUDE_DIRS ${rapidjson_SOURCE_DIR}/include)
 endif()
 
+# Find yaml-cpp (optional dependency for YAML serialization support)
+find_package(yaml-cpp QUIET)
+if(NOT yaml-cpp_FOUND)
+  pkg_check_modules(yaml-cpp QUIET yaml-cpp)
+endif()
+
+# If yaml-cpp isn't found, fetch it for tests and examples
+if(NOT yaml-cpp_FOUND)
+  include(FetchContent)
+
+  FetchContent_Declare(
+    yaml-cpp
+    GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+    GIT_TAG master)
+
+  FetchContent_MakeAvailable(yaml-cpp)
+
+  # yaml-cpp target is now available
+  set(yaml-cpp_FOUND TRUE)
+endif()
+
 # Create interface library for lazy-cpp headers
 add_library(lazy-cpp INTERFACE)
 target_include_directories(
   lazy-cpp INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
                      $<INSTALL_INTERFACE:include> ${RapidJSON_INCLUDE_DIRS})
 target_compile_features(lazy-cpp INTERFACE cxx_std_17)
+
+# Note: yaml-cpp is an optional dependency. Consuming targets that use YAML
+# serialization should link to yaml-cpp directly when needed.
 
 # Add examples subdirectory
 add_subdirectory(examples)
