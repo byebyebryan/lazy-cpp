@@ -1,6 +1,6 @@
 # Serialization tests
 add_executable(serialization-tests test_serializable.cpp test_json.cpp
-                                   test_text.cpp)
+                                   test_text.cpp test_binary.cpp)
 
 target_link_libraries(serialization-tests PRIVATE lazy-cpp GTest::gtest_main
                                                   ${RapidJSON_LIBRARIES})

@@ -20,6 +20,10 @@ namespace serialization {
  * Provides the ContextType interface required by Serializable.
  */
 class RapidJsonContext {
+ private:
+  rapidjson::Document document_;
+  std::ostream* writeStream_ = nullptr;  // For serialization
+
  public:
   using NodeType = rapidjson::Value*;
 
@@ -30,10 +34,20 @@ class RapidJsonContext {
     document_.ParseStream(isw);
   }
 
-  void toStream(std::ostream& stream) const {
-    rapidjson::OStreamWrapper osw(stream);
-    rapidjson::Writer<rapidjson::OStreamWrapper> writer(osw);
-    document_.Accept(writer);
+  // For serialization - store stream reference
+  explicit RapidJsonContext(std::ostream& stream) : writeStream_(&stream) { document_.SetObject(); }
+
+  // Clean finish methods for symmetric API
+  void finishSerialization() const {
+    if (writeStream_) {
+      rapidjson::OStreamWrapper osw(*writeStream_);
+      rapidjson::Writer<rapidjson::OStreamWrapper> writer(osw);
+      document_.Accept(writer);
+    }
+  }
+
+  void finishDeserialization() {
+    // No-op for JSON - no cleanup needed after deserialization
   }
 
   rapidjson::Document::AllocatorType& getAllocator() { return document_.GetAllocator(); }
@@ -94,9 +108,6 @@ class RapidJsonContext {
       node->Set<T>(value);
     }
   }
-
- private:
-  rapidjson::Document document_;
 };
 
 // Convenience alias for JSON serializable types

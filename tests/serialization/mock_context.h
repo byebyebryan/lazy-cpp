@@ -38,11 +38,20 @@ class MockContext {
   MockContext(std::istream& /*stream*/) : root_(new MockNode()) {
     // Mock deserialization from stream - populate with test data if needed
   }
+  explicit MockContext(std::ostream& stream) : root_(new MockNode()), writeStream_(&stream) {
+    // Mock serialization to stream - for testing consistency
+  }
   ~MockContext() { delete root_; }
 
-  void toStream(std::ostream& stream) const {
-    // Mock output to stream for testing
-    stream << "mock_output";
+  // Symmetric finish methods for new API
+  void finishSerialization() const {
+    if (writeStream_) {
+      *writeStream_ << "mock_output";
+    }
+  }
+
+  void finishDeserialization() {
+    // No-op for mock context
   }
 
   NodeType root() { return root_; }
@@ -129,4 +138,5 @@ class MockContext {
  private:
   MockNode* root_;
   std::vector<std::pair<std::string, std::string>> operations_;
+  std::ostream* writeStream_ = nullptr;  // For serialization
 };

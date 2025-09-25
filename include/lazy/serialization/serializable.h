@@ -93,14 +93,15 @@ class Serializable {
 
  public:
   void serialize(std::ostream& stream) const {
-    SerializationContextType context;
+    SerializationContextType context(stream);
     serialize(context, context.root());
-    context.toStream(stream);
+    context.finishSerialization();
   }
 
   void deserialize(std::istream& stream) {
     SerializationContextType context(stream);
     deserialize(context, context.root());
+    context.finishDeserialization();
   }
 };
 

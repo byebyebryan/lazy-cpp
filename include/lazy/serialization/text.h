@@ -28,6 +28,9 @@ class TextContext {
   // Track current index for each array during serialization
   mutable std::map<std::string, size_t> arrayIndices_;
 
+  // For direct writing during serialization
+  std::ostream* writeStream_ = nullptr;
+
  public:
   using NodeType = const std::string*;
 
@@ -40,10 +43,16 @@ class TextContext {
     }
   }
 
-  void toStream(std::ostream& stream) const {
-    for (const auto& [key, value] : data_) {
-      stream << key << " = " << value << '\n';
-    }
+  // For serialization - write text directly to stream
+  explicit TextContext(std::ostream& stream) : writeStream_(&stream) {}
+
+  // Clean finish methods for symmetric API
+  void finishSerialization() {
+    // No-op for text - already writing directly to stream during setValue()
+  }
+
+  void finishDeserialization() {
+    // No-op for text - no cleanup needed after deserialization
   }
 
   NodeType root() {
@@ -99,7 +108,17 @@ class TextContext {
 
   void setArray(NodeType node, size_t size) {
     if (!node) return;
-    data_[*node + ".count"] = std::to_string(size);
+    std::string countKey = *node + ".count";
+    std::string countValue = std::to_string(size);
+
+    if (writeStream_) {
+      // Write directly to stream during serialization
+      *writeStream_ << countKey << " = " << countValue << '\n';
+    } else {
+      // Store in map for deserialization
+      data_[countKey] = countValue;
+    }
+
     // Reset the array index counter for this array
     arrayIndices_[*node] = 0;
   }
@@ -172,15 +191,25 @@ class TextContext {
   template <typename T>
   void setValue(NodeType node, const T& value) {
     if (!node) return;
+
+    std::string textValue;
     if constexpr (std::is_same_v<T, std::string>) {
       // Quote string values
-      data_[*node] = "\"" + value + "\"";
+      textValue = "\"" + value + "\"";
     } else if constexpr (std::is_same_v<T, bool>) {
-      data_[*node] = value ? "true" : "false";
+      textValue = value ? "true" : "false";
     } else if constexpr (std::is_arithmetic_v<T>) {
-      data_[*node] = std::to_string(value);
+      textValue = std::to_string(value);
     } else {
       static_assert(!std::is_same_v<T, T>, "Unsupported type for setValue");
+    }
+
+    if (writeStream_) {
+      // Write directly to stream during serialization
+      *writeStream_ << *node << " = " << textValue << '\n';
+    } else {
+      // Store in map for deserialization
+      data_[*node] = textValue;
     }
   }
 

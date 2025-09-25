@@ -11,8 +11,9 @@
   use SERIALIZABLE_FIELD to declare serializable fields
 
   Example:
-  class Foo : public lazy::serialization::Serializable<Foo, TextContext>
-  class Bar : public lazy::serialization::Serializable<Bar, JsonContext>
+  class TextClass : public lazy::serialization::Serializable<TextClass, TextContext>
+  class JsonClass : public lazy::serialization::Serializable<JsonClass, JsonContext>
+  class BinaryClass : public lazy::serialization::Serializable<BinaryClass, BinaryContext>
 
   Here we will use lazy::TextSerializable<T> = lazy::serialization::Serializable<T, TextContext>
 */
@@ -71,13 +72,13 @@ int main() {
   std::istringstream iss(ss2.str());
   myClass2.deserialize(iss);
   std::cout << "Deserialized Modified: \n"
-      << "name: " << myClass2.name << "\n"
-      << "value: " << myClass2.value << "\n"
-      << "subClass.name: " << myClass2.subClass.name << "\n"
-      << "sealedClass.name: " << myClass2.sealedClass.name << "\n"
-      << "intVector.0: " << myClass2.intVector[0] << "\n"
-      << "intVector.1: " << myClass2.intVector[1] << "\n"
-      << "intVector.2: " << myClass2.intVector[2] << std::endl;
+            << "name: " << myClass2.name << "\n"
+            << "value: " << myClass2.value << "\n"
+            << "subClass.name: " << myClass2.subClass.name << "\n"
+            << "sealedClass.name: " << myClass2.sealedClass.name << "\n"
+            << "intVector.0: " << myClass2.intVector[0] << "\n"
+            << "intVector.1: " << myClass2.intVector[1] << "\n"
+            << "intVector.2: " << myClass2.intVector[2] << std::endl;
 
   return 0;
 }

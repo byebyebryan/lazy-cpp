@@ -119,12 +119,23 @@ TEST_F(TextContextTest, StreamRoundTrip) {
   context.setValue(key2Node, 42);
   context.setValue(nestedField, 3.14);
 
-  // Serialize to stream
+  // Since this fixture uses default context (no stream), we need to create new context for
+  // serialization
   std::stringstream ss;
-  context.toStream(ss);
+  lazy::serialization::TextContext writeContext(ss);
+  auto writeRoot = writeContext.root();
+  auto writeKey1Node = writeContext.addChild(writeRoot, "key1");
+  auto writeKey2Node = writeContext.addChild(writeRoot, "key2");
+  auto writeNestedParent = writeContext.addChild(writeRoot, "nested");
+  auto writeNestedField = writeContext.addChild(writeNestedParent, "field");
+
+  writeContext.setValue(writeKey1Node, std::string("value1"));
+  writeContext.setValue(writeKey2Node, 42);
+  writeContext.setValue(writeNestedField, 3.14);
+  writeContext.finishSerialization();  // Ensure all data is flushed
 
   // Deserialize from stream
-  lazy::serialization::TextContext context2(ss);
+  lazy::serialization::TextContext context2(static_cast<std::istream&>(ss));
 
   // Verify values are preserved by getting nodes and checking their values
   auto root2 = context2.root();

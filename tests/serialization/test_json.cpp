@@ -101,12 +101,14 @@ TEST_F(RapidJsonContextTest, ArrayOperations) {
 }
 
 TEST_F(RapidJsonContextTest, StreamOperations) {
-  auto root = context.root();
-  auto child = context.addChild(root, "stream_test");
-  context.setValue<std::string>(child, "stream_value");
-
   std::ostringstream oss;
-  context.toStream(oss);
+  lazy::serialization::RapidJsonContext streamContext(oss);
+  auto root = streamContext.root();
+  auto child = streamContext.addChild(root, "stream_test");
+  streamContext.setValue<std::string>(child, "stream_value");
+
+  // finishSerialization() writes to the stream passed in constructor
+  streamContext.finishSerialization();
   std::string json = oss.str();
 
   EXPECT_FALSE(json.empty());
