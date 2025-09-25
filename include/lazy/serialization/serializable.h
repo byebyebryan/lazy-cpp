@@ -181,12 +181,13 @@ struct Serializer<
   static void serialize(const void* value, ContextType& context,
                         typename ContextType::NodeType node, const std::string& key) {
     auto* childNode = context.addChild(node, key);
+    context.setObject(childNode);
     static_cast<const ValueType*>(value)->serialize(context, childNode);
   }
   static void deserialize(void* value, ContextType& context, typename ContextType::NodeType node,
                           const std::string& key) {
     auto* childNode = context.getChild(node, key);
-    if (childNode) {
+    if (childNode && context.isObject(childNode)) {
       static_cast<ValueType*>(value)->deserialize(context, childNode);
     }
   }

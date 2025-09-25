@@ -54,6 +54,9 @@ class RapidJsonContext {
     return &(*node)[key.c_str()];
   }
 
+  bool isObject(NodeType node) { return node->IsObject(); }
+  void setObject(NodeType node) { node->SetObject(); }
+
   bool isArray(NodeType node) { return node->IsArray(); }
   void setArray(NodeType node, size_t size) {
     node->SetArray();
