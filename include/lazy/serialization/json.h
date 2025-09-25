@@ -1,31 +1,36 @@
 #pragma once
 
 #include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
+#include <rapidjson/istreamwrapper.h>
+#include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/writer.h>
 
+#include <istream>
+#include <ostream>
 #include <string>
 #include <type_traits>
 
-namespace lazy::serialization {
+#include "lazy/serialization/serializable.h"
+
+namespace lazy {
+namespace serialization {
 
 // JSON serialization context using RapidJSON
 class RapidJsonContext {
  public:
   using NodeType = rapidjson::Value*;
 
-  // create a new / empty context to start serialization
   RapidJsonContext() { document_.SetObject(); }
 
-  // load context fro deserialization
-  explicit RapidJsonContext(const std::string& jsonString) { document_.Parse(jsonString.c_str()); }
+  explicit RapidJsonContext(std::istream& stream) {
+    rapidjson::IStreamWrapper isw(stream);
+    document_.ParseStream(isw);
+  }
 
-  // serialize to JSON string
-  std::string toString() const {
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+  void toStream(std::ostream& stream) const {
+    rapidjson::OStreamWrapper osw(stream);
+    rapidjson::Writer<rapidjson::OStreamWrapper> writer(osw);
     document_.Accept(writer);
-    return buffer.GetString();
   }
 
   rapidjson::Document::AllocatorType& getAllocator() { return document_.GetAllocator(); }
@@ -96,15 +101,12 @@ class RapidJsonContext {
   rapidjson::Document document_;
 };
 
-}  // namespace lazy::serialization
-
-#include "lazy/serialization/serializable.h"
-
-namespace lazy {
-namespace serialization {
 template <typename T>
 using JsonSerializable = Serializable<T, RapidJsonContext>;
+
 }  // namespace serialization
+
 template <typename T>
 using JsonSerializable = serialization::JsonSerializable<T>;
+
 }  // namespace lazy

@@ -1,7 +1,9 @@
 #pragma once
 
 #include <functional>
+#include <istream>
 #include <mutex>
+#include <ostream>
 #include <string>
 #include <vector>
 
@@ -65,14 +67,14 @@ class Serializable {
   friend struct Serializer;
 
  public:
-  std::string serialize() const {
+  void serialize(std::ostream& stream) const {
     ContextType context;
     serialize(context, context.root());
-    return context.toString();
+    context.toStream(stream);
   }
 
-  void deserialize(const std::string& data) {
-    ContextType context(data);
+  void deserialize(std::istream& stream) {
+    ContextType context(stream);
     deserialize(context, context.root());
   }
 };
@@ -179,7 +181,7 @@ struct Serializer<
   static void serialize(const void* value, ContextType& context,
                         typename ContextType::NodeType node, const std::string& key) {
     auto* childNode = context.addChild(node, key);
-    static_cast<ValueType*>(value)->serialize(context, childNode);
+    static_cast<const ValueType*>(value)->serialize(context, childNode);
   }
   static void deserialize(void* value, ContextType& context, typename ContextType::NodeType node,
                           const std::string& key) {
