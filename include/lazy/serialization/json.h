@@ -71,18 +71,8 @@ class RapidJsonContext {
   }
 
   template <typename T>
-  struct CustomValueTypes {
-    constexpr static bool enabled = false;
-    T getValue(RapidJsonContext& context, NodeType node) { return T(); }
-    void setValue(RapidJsonContext& context, NodeType node, T value) {}
-  };
-
-  template <typename T>
   T getValue(NodeType node) {
-    // if functor exists for T, use it
-    if constexpr (CustomValueTypes<T>::enabled) {
-      return CustomValueTypes<T>::getValue(*this, node);
-    } else if constexpr (std::is_same_v<T, std::string>) {
+    if constexpr (std::is_same_v<T, std::string>) {
       return std::string(node->GetString());
     } else {
       return node->Get<T>();
@@ -91,9 +81,7 @@ class RapidJsonContext {
 
   template <typename T>
   void setValue(NodeType node, T value) {
-    if constexpr (CustomValueTypes<T>::enabled) {
-      CustomValueTypes<T>::setValue(*this, node, value);
-    } else if constexpr (std::is_same_v<T, std::string>) {
+    if constexpr (std::is_same_v<T, std::string>) {
       node->SetString(value.c_str(), value.size(), getAllocator());
     } else {
       node->Set<T>(value);

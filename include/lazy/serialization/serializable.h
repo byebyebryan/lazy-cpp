@@ -193,4 +193,70 @@ struct Serializer<
   }
 };
 
+// Generic macros for generating Serializer specializations for custom types
+
+// Variadic FOR_EACH implementation - applies a macro to each argument
+#define SERIALIZABLE_APPLY_0(m, ...)
+#define SERIALIZABLE_APPLY_1(m, x1) m(x1)
+#define SERIALIZABLE_APPLY_2(m, x1, x2) m(x1) m(x2)
+#define SERIALIZABLE_APPLY_3(m, x1, x2, x3) m(x1) m(x2) m(x3)
+#define SERIALIZABLE_APPLY_4(m, x1, x2, x3, x4) m(x1) m(x2) m(x3) m(x4)
+#define SERIALIZABLE_APPLY_5(m, x1, x2, x3, x4, x5) m(x1) m(x2) m(x3) m(x4) m(x5)
+#define SERIALIZABLE_APPLY_6(m, x1, x2, x3, x4, x5, x6) m(x1) m(x2) m(x3) m(x4) m(x5) m(x6)
+#define SERIALIZABLE_APPLY_7(m, x1, x2, x3, x4, x5, x6, x7) \
+  m(x1) m(x2) m(x3) m(x4) m(x5) m(x6) m(x7)
+#define SERIALIZABLE_APPLY_8(m, x1, x2, x3, x4, x5, x6, x7, x8) \
+  m(x1) m(x2) m(x3) m(x4) m(x5) m(x6) m(x7) m(x8)
+
+#define SERIALIZABLE_NARGS_IMPL(_1, _2, _3, _4, _5, _6, _7, _8, N, ...) N
+#define SERIALIZABLE_NARGS(...) SERIALIZABLE_NARGS_IMPL(__VA_ARGS__, 8, 7, 6, 5, 4, 3, 2, 1, 0)
+
+#define SERIALIZABLE_APPLY_CONCAT(a, b) a##b
+#define SERIALIZABLE_APPLY_IMPL(n, m, ...) \
+  SERIALIZABLE_APPLY_CONCAT(SERIALIZABLE_APPLY_, n)(m, __VA_ARGS__)
+#define SERIALIZABLE_FOR_EACH(m, ...) \
+  SERIALIZABLE_APPLY_IMPL(SERIALIZABLE_NARGS(__VA_ARGS__), m, __VA_ARGS__)
+
+// Helper to generate deserialize body for a single field
+#define SERIALIZABLE_TYPE_DESERIALIZE_FIELD(field_name)                                     \
+  if (auto field_name##Node = context.getChild(childNode, #field_name); field_name##Node) { \
+    result->field_name =                                                                    \
+        context.template getValue<decltype(result->field_name)>(field_name##Node);          \
+  }
+
+// Helper to generate serialize body for a single field
+#define SERIALIZABLE_TYPE_SERIALIZE_FIELD(field_name)                                        \
+  {                                                                                          \
+    auto field_name##Node = context.addChild(childNode, #field_name);                        \
+    context.template setValue<decltype(obj->field_name)>(field_name##Node, obj->field_name); \
+  }
+
+// Single unified macro implementation - no more duplication!
+// Handles any number of fields using variadic FOR_EACH
+#define SERIALIZABLE_TYPE_IMPL(ContextType, Type, ...)                                     \
+  template <>                                                                              \
+  struct Serializer<Type, ContextType> {                                                   \
+    static void serialize(const void* value, ContextType& context,                         \
+                          typename ContextType::NodeType node, const std::string& key) {   \
+      const Type* obj = static_cast<const Type*>(value);                                   \
+      auto childNode = context.addChild(node, key);                                        \
+      context.setObject(childNode);                                                        \
+      SERIALIZABLE_FOR_EACH(SERIALIZABLE_TYPE_SERIALIZE_FIELD, __VA_ARGS__)                \
+    }                                                                                      \
+    static void deserialize(void* value, ContextType& context,                             \
+                            typename ContextType::NodeType node, const std::string& key) { \
+      Type* result = static_cast<Type*>(value);                                            \
+      auto childNode = context.getChild(node, key);                                        \
+      if (childNode && context.isObject(childNode)) {                                      \
+        SERIALIZABLE_FOR_EACH(SERIALIZABLE_TYPE_DESERIALIZE_FIELD, __VA_ARGS__)            \
+      }                                                                                    \
+    }                                                                                      \
+  };
+
+// Main macro - simply delegates to the unified implementation
+// Usage: SERIALIZABLE_TYPE(ContextType, Type, field1, field2, ...)
+// Supports up to 8 fields (can be easily extended by adding more SERIALIZABLE_APPLY_N macros)
+#define SERIALIZABLE_TYPE(ContextType, Type, ...) \
+  SERIALIZABLE_TYPE_IMPL(ContextType, Type, __VA_ARGS__)
+
 }  // namespace lazy::serialization

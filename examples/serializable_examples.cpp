@@ -4,9 +4,9 @@
 #include "lazy/serialization/json.h"
 
 class MySubClass : public lazy::JsonSerializable<MySubClass> {
-  public:
-   SERIALIZABLE_FIELD(std::string, name, "MySubClass");
- };
+ public:
+  SERIALIZABLE_FIELD(std::string, name, "MySubClass");
+};
 
 class MySealedClass {
  public:
@@ -14,26 +14,8 @@ class MySealedClass {
 };
 
 namespace lazy::serialization {
-template <>
-struct RapidJsonContext::CustomValueTypes<MySealedClass> {
-  constexpr static bool enabled = true;
-  static MySealedClass getValue(RapidJsonContext& context, RapidJsonContext::NodeType node) {
-    MySealedClass result;
-    if (!context.isObject(node)) {
-      return result;
-    }
-    if (auto nameNode = context.getChild(node, "name"); nameNode) {
-      result.name = context.getValue<std::string>(nameNode);
-    }
-    return result;
-  }
-  static void setValue(RapidJsonContext& context, RapidJsonContext::NodeType node,
-                       MySealedClass value) {
-    context.setObject(node);
-    auto nameNode = context.addChild(node, "name");
-    context.setValue<std::string>(nameNode, value.name);
-  }
-};
+// make MySealedClass serializable
+SERIALIZABLE_TYPE(RapidJsonContext, MySealedClass, name)
 }  // namespace lazy::serialization
 
 class MyClass : public lazy::JsonSerializable<MyClass> {
@@ -67,5 +49,6 @@ int main() {
             << "name: " << myClass2.name << "\n"
             << "value: " << myClass2.value << "\n"
             << "subClass.name: " << myClass2.subClass.name << "\n"
-            << "sealedClass.name: " << myClass2.sealedClass.name << std::endl;
+            << "sealedClass.name: " << myClass2.sealedClass.name << "\n"
+            << std::endl;
 }
