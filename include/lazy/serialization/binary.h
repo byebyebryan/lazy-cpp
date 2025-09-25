@@ -15,8 +15,8 @@ namespace lazy {
 namespace serialization {
 
 /**
- * Simple binary serialization context implementation.
- * Provides the ContextType interface required by Serializable.
+ * Simple binary serialization adapter implementation.
+ * Provides the AdapterType interface required by Serializable.
  *
  * Binary Memory Layout:
  * - Primitives: stored as little-endian bytes (int32 = 4 bytes, double = 8 bytes, etc.)
@@ -32,7 +32,7 @@ namespace serialization {
  * - No intermediate data collection needed
  * - Sequential reading during deserialization directly from input stream
  */
-class BinaryContext {
+class BinaryAdapter {
  private:
   std::istream* readStream_;   // For deserialization
   std::ostream* writeStream_;  // For serialization
@@ -45,11 +45,11 @@ class BinaryContext {
                                         // in binary format
 
   // For deserialization
-  explicit BinaryContext(std::istream& stream)
+  explicit BinaryAdapter(std::istream& stream)
       : readStream_(&stream), writeStream_(nullptr), dummyPath_("") {}
 
   // For serialization
-  explicit BinaryContext(std::ostream& stream)
+  explicit BinaryAdapter(std::ostream& stream)
       : readStream_(nullptr), writeStream_(&stream), dummyPath_("") {}
 
   // Clean finish methods for symmetric API
@@ -245,7 +245,7 @@ class BinaryContext {
 
 // Convenience alias for binary serializable types
 template <typename T>
-using BinarySerializable = Serializable<T, BinaryContext>;
+using BinarySerializable = Serializable<T, BinaryAdapter>;
 
 }  // namespace serialization
 

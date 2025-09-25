@@ -38,7 +38,7 @@ class ExternalClass {
 };
 
 namespace lazy::serialization {
-SERIALIZABLE_TYPE(TextContext, ExternalClass, value, description, flag)
+SERIALIZABLE_TYPE(TextAdapter, ExternalClass, value, description, flag)
 }
 
 class TextClassWithExternal : public lazy::TextSerializable<TextClassWithExternal> {
@@ -48,15 +48,15 @@ class TextClassWithExternal : public lazy::TextSerializable<TextClassWithExterna
 };
 
 // ================================================================================
-// TextContext Unit Tests
+// TextAdapter Unit Tests
 // ================================================================================
 
-class TextContextTest : public ::testing::Test {
+class TextAdapterTest : public ::testing::Test {
  protected:
-  lazy::serialization::TextContext context;
+  lazy::serialization::TextAdapter context;
 };
 
-TEST_F(TextContextTest, BasicValueOperations) {
+TEST_F(TextAdapterTest, BasicValueOperations) {
   // Test setValue and getValue for different types
   auto root = context.root();
   auto intNode = context.addChild(root, "intKey");
@@ -75,7 +75,7 @@ TEST_F(TextContextTest, BasicValueOperations) {
   EXPECT_EQ(context.getValue<bool>(boolNode), true);
 }
 
-TEST_F(TextContextTest, NodePathOperations) {
+TEST_F(TextAdapterTest, NodePathOperations) {
   auto root = context.root();
   EXPECT_EQ(*root, "");
 
@@ -92,7 +92,7 @@ TEST_F(TextContextTest, NodePathOperations) {
   EXPECT_EQ(*retrieved, "parent");
 }
 
-TEST_F(TextContextTest, ArrayOperations) {
+TEST_F(TextAdapterTest, ArrayOperations) {
   auto root = context.root();
   auto arrayNode = context.addChild(root, "testArray");
 
@@ -107,7 +107,7 @@ TEST_F(TextContextTest, ArrayOperations) {
   EXPECT_EQ(*element1, "testArray.1");
 }
 
-TEST_F(TextContextTest, StreamRoundTrip) {
+TEST_F(TextAdapterTest, StreamRoundTrip) {
   // Set some values
   auto root = context.root();
   auto key1Node = context.addChild(root, "key1");
@@ -122,7 +122,7 @@ TEST_F(TextContextTest, StreamRoundTrip) {
   // Since this fixture uses default context (no stream), we need to create new context for
   // serialization
   std::stringstream ss;
-  lazy::serialization::TextContext writeContext(static_cast<std::ostream&>(ss));
+  lazy::serialization::TextAdapter writeContext(static_cast<std::ostream&>(ss));
   auto writeRoot = writeContext.root();
   auto writeKey1Node = writeContext.addChild(writeRoot, "key1");
   auto writeKey2Node = writeContext.addChild(writeRoot, "key2");
@@ -135,7 +135,7 @@ TEST_F(TextContextTest, StreamRoundTrip) {
   writeContext.finishSerialization();  // Ensure all data is flushed
 
   // Deserialize from stream
-  lazy::serialization::TextContext context2(static_cast<std::istream&>(ss));
+  lazy::serialization::TextAdapter context2(static_cast<std::istream&>(ss));
 
   // Verify values are preserved by getting nodes and checking their values
   auto root2 = context2.root();

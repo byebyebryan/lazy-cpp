@@ -2,14 +2,14 @@
 #include <sstream>
 
 /*
-  Derive from lazy::serialization::Serializable<T, ContextType> to make a class serializable
+  Derive from lazy::serialization::Serializable<T, AdapterType> to make a class serializable
   use SERIALIZABLE_FIELD to declare serializable fields
 
   Each serialization impl provides a convenience alias:
-  - lazy::TextSerializable<T> = lazy::serialization::Serializable<T, TextContext>
-  - lazy::JsonSerializable<T> = lazy::serialization::Serializable<T, JsonContext>
-  - lazy::BinarySerializable<T> = lazy::serialization::Serializable<T, BinaryContext>
-  - lazy::YamlSerializable<T> = lazy::serialization::Serializable<T, YamlContext>
+  - lazy::TextSerializable<T> = lazy::serialization::Serializable<T, TextAdapter>
+  - lazy::JsonSerializable<T> = lazy::serialization::Serializable<T, JsonAdapter>
+  - lazy::BinarySerializable<T> = lazy::serialization::Serializable<T, BinaryAdapter>
+  - lazy::YamlSerializable<T> = lazy::serialization::Serializable<T, YamlAdapter>
 
   Example:
   #include "lazy/serialization/json.h"
@@ -47,23 +47,23 @@
 
 #ifdef USE_TEXT
 #include "lazy/serialization/text.h"
-using SerializationContext = lazy::serialization::TextContext;
-constexpr const char* kSerializationContextName = "Text";
+using SerializationAdapter = lazy::serialization::TextAdapter;
+constexpr const char* kSerializationAdapterName = "Text";
 #elif defined(USE_JSON)
 #include "lazy/serialization/json.h"
-using SerializationContext = lazy::serialization::RapidJsonContext;
-constexpr const char* kSerializationContextName = "Json";
+using SerializationAdapter = lazy::serialization::JsonAdapter;
+constexpr const char* kSerializationAdapterName = "Json";
 #elif defined(USE_BINARY)
 #include "lazy/serialization/binary.h"
-using SerializationContext = lazy::serialization::BinaryContext;
-constexpr const char* kSerializationContextName = "Binary";
+using SerializationAdapter = lazy::serialization::BinaryAdapter;
+constexpr const char* kSerializationAdapterName = "Binary";
 #elif defined(USE_YAML)
 #include "lazy/serialization/yaml.h"
-using SerializationContext = lazy::serialization::YamlContext;
-constexpr const char* kSerializationContextName = "Yaml";
+using SerializationAdapter = lazy::serialization::YamlAdapter;
+constexpr const char* kSerializationAdapterName = "Yaml";
 #endif
 
-class MySubClass : public lazy::serialization::Serializable<MySubClass, SerializationContext> {
+class MySubClass : public lazy::serialization::Serializable<MySubClass, SerializationAdapter> {
  public:
   SERIALIZABLE_FIELD(std::string, name, "MySubClass");
 };
@@ -76,11 +76,11 @@ class MySealedClass {
 namespace lazy::serialization {
 
 // make MySealedClass serializable non-intrusively
-SERIALIZABLE_TYPE(SerializationContext, MySealedClass, name)
+SERIALIZABLE_TYPE(SerializationAdapter, MySealedClass, name)
 
 }  // namespace lazy::serialization
 
-class MyClass : public lazy::serialization::Serializable<MyClass, SerializationContext> {
+class MyClass : public lazy::serialization::Serializable<MyClass, SerializationAdapter> {
  public:
   // Primitive fields with default value
   SERIALIZABLE_FIELD(std::string, name, "MyClass");
@@ -97,7 +97,7 @@ class MyClass : public lazy::serialization::Serializable<MyClass, SerializationC
 };
 
 int main() {
-  std::cout << "Using serialization context: " << kSerializationContextName << "\n" << std::endl;
+  std::cout << "Using serialization adapter: " << kSerializationAdapterName << "\n" << std::endl;
 
   MyClass myClass;
 

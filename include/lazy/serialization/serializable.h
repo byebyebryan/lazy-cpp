@@ -13,12 +13,12 @@ namespace lazy::serialization {
  * Provides automatic serialization
  *
  * ConcreteT: The derived class being made serializable
- * ContextT: Serialization context (e.g., JSON, XML) providing node operations
+ * AdapterT: Serialization adapter (e.g., JSON, XML) providing node operations
  *
  * use SERIALIZABLE_FIELD to declare serializable fields
  *
  * Example:
- * class MyClass : public Serializable<MyClass, JsonContext> {
+ * class MyClass : public Serializable<MyClass, JsonAdapter> {
  *   SERIALIZABLE_FIELD(std::string, name, "MyClass");
  * };
  *
@@ -26,7 +26,7 @@ namespace lazy::serialization {
  * myClass.serialize(stream);
  * myClass.deserialize(stream);
  */
-template <typename ConcreteT, typename ContextT>
+template <typename ConcreteT, typename AdapterT>
 class Serializable {
  private:
   struct SerializableFieldMetadata;
@@ -34,7 +34,7 @@ class Serializable {
  protected:
   // Macros need these aliases
   using ConcreteType = ConcreteT;
-  using SerializationContextType = ContextT;
+  using SerializableAdapterType = AdapterT;
 
   static std::vector<SerializableFieldMetadata> serializationFields_;
 
@@ -45,11 +45,11 @@ class Serializable {
 
   // Type-erased serialization functions
   using SerializationFunction =
-      std::function<void(const void*, SerializationContextType&,
-                         typename SerializationContextType::NodeType, const std::string&)>;
+      std::function<void(const void*, SerializableAdapterType&,
+                         typename SerializableAdapterType::NodeType, const std::string&)>;
   using DeserializationFunction =
-      std::function<void(void*, SerializationContextType&,
-                         typename SerializationContextType::NodeType, const std::string&)>;
+      std::function<void(void*, SerializableAdapterType&,
+                         typename SerializableAdapterType::NodeType, const std::string&)>;
 
   // Complete field metadata package
   struct SerializableFieldMetadata {
@@ -71,43 +71,43 @@ class Serializable {
   };
 
   // Core serialization - iterate through registered fields
-  void serialize(SerializationContextType& context,
-                 typename SerializationContextType::NodeType node) const {
+  void serialize(SerializableAdapterType& adapter,
+                 typename SerializableAdapterType::NodeType node) const {
     for (auto& field : serializationFields_) {
       const void* fieldAddress = field.constAccessor(static_cast<const ConcreteType*>(this));
-      field.serializationFn(fieldAddress, context, node, field.name);
+      field.serializationFn(fieldAddress, adapter, node, field.name);
     }
   }
 
-  void deserialize(SerializationContextType& context,
-                   typename SerializationContextType::NodeType node) {
+  void deserialize(SerializableAdapterType& adapter,
+                   typename SerializableAdapterType::NodeType node) {
     for (auto& field : serializationFields_) {
       void* fieldAddress = field.mutableAccessor(static_cast<ConcreteType*>(this));
-      field.deserializationFn(fieldAddress, context, node, field.name);
+      field.deserializationFn(fieldAddress, adapter, node, field.name);
     }
   }
 
   // Serializer needs access to the two functions above
-  template <typename ValueType, typename ContextType, typename Enable>
+  template <typename ValueType, typename AdapterType, typename Enable>
   friend struct Serializer;
 
  public:
   void serialize(std::ostream& stream) const {
-    SerializationContextType context(stream);
-    serialize(context, context.root());
-    context.finishSerialization();
+    SerializableAdapterType adapter(stream);
+    serialize(adapter, adapter.root());
+    adapter.finishSerialization();
   }
 
   void deserialize(std::istream& stream) {
-    SerializationContextType context(stream);
-    deserialize(context, context.root());
-    context.finishDeserialization();
+    SerializableAdapterType adapter(stream);
+    deserialize(adapter, adapter.root());
+    adapter.finishDeserialization();
   }
 };
 
-template <typename ConcreteT, typename ContextT>
-std::vector<typename Serializable<ConcreteT, ContextT>::SerializableFieldMetadata>
-    Serializable<ConcreteT, ContextT>::serializationFields_;
+template <typename ConcreteT, typename AdapterT>
+std::vector<typename Serializable<ConcreteT, AdapterT>::SerializableFieldMetadata>
+    Serializable<ConcreteT, AdapterT>::serializationFields_;
 
 // ================================================================================================
 // SERIALIZABLE_FIELD for declaring serializable fields
@@ -122,23 +122,23 @@ std::vector<typename Serializable<ConcreteT, ContextT>::SerializableFieldMetadat
  * Field registration via static initialization.
  * Each field is registered exactly once.
  */
-#define REGISTER_SERIALIZABLE_FIELD(type, name)                                             \
-  class register_##name##_helper {                                                          \
-    register_##name##_helper() {                                                            \
-      static std::once_flag registrationFlag;                                               \
-      std::call_once(registrationFlag, []() {                                               \
-        ConcreteType::serializationFields_.emplace_back(                                    \
-            #name,                                                                          \
-            [](const ConcreteType* obj) -> const void* {                                    \
-              return static_cast<const void*>(&obj->name);                                  \
-            },                                                                              \
-            [](ConcreteType* obj) -> void* { return static_cast<void*>(&obj->name); },      \
-            &lazy::serialization::Serializer<type, SerializationContextType>::serialize,    \
-            &lazy::serialization::Serializer<type, SerializationContextType>::deserialize); \
-      });                                                                                   \
-    }                                                                                       \
-    friend ConcreteType;                                                                    \
-  };                                                                                        \
+#define REGISTER_SERIALIZABLE_FIELD(type, name)                                            \
+  class register_##name##_helper {                                                         \
+    register_##name##_helper() {                                                           \
+      static std::once_flag registrationFlag;                                              \
+      std::call_once(registrationFlag, []() {                                              \
+        ConcreteType::serializationFields_.emplace_back(                                   \
+            #name,                                                                         \
+            [](const ConcreteType* obj) -> const void* {                                   \
+              return static_cast<const void*>(&obj->name);                                 \
+            },                                                                             \
+            [](ConcreteType* obj) -> void* { return static_cast<void*>(&obj->name); },     \
+            &lazy::serialization::Serializer<type, SerializableAdapterType>::serialize,    \
+            &lazy::serialization::Serializer<type, SerializableAdapterType>::deserialize); \
+      });                                                                                  \
+    }                                                                                      \
+    friend ConcreteType;                                                                   \
+  };                                                                                       \
   register_##name##_helper register_##name##_helper_;
 
 // SerializableField macro implementation without default value
@@ -182,67 +182,67 @@ std::vector<typename Serializable<ConcreteT, ContextT>::SerializableFieldMetadat
 // ================================================================================================
 
 // Primitive types that can be handled directly by the specific serializer context
-template <typename ValueType, typename ContextType, typename Enable = void>
+template <typename ValueType, typename AdapterType, typename Enable = void>
 struct Serializer {
-  static void serialize(const void* value, ContextType& context,
-                        typename ContextType::NodeType node, const std::string& key) {
-    auto* childNode = context.addChild(node, key);
-    context.template setValue<ValueType>(childNode, *static_cast<const ValueType*>(value));
+  static void serialize(const void* value, AdapterType& adapter,
+                        typename AdapterType::NodeType node, const std::string& key) {
+    auto* childNode = adapter.addChild(node, key);
+    adapter.template setValue<ValueType>(childNode, *static_cast<const ValueType*>(value));
   }
-  static void deserialize(void* value, ContextType& context, typename ContextType::NodeType node,
+  static void deserialize(void* value, AdapterType& adapter, typename AdapterType::NodeType node,
                           const std::string& key) {
-    auto* childNode = context.getChild(node, key);
+    auto* childNode = adapter.getChild(node, key);
     if (childNode) {
-      *static_cast<ValueType*>(value) = context.template getValue<ValueType>(childNode);
+      *static_cast<ValueType*>(value) = adapter.template getValue<ValueType>(childNode);
     }
   }
 };
 
 // Unpack array and forward handling to Serializer<ElementType>
-template <typename ValueType, typename ContextType>
-struct Serializer<std::vector<ValueType>, ContextType> {
-  static void serialize(const void* value, ContextType& context,
-                        typename ContextType::NodeType node, const std::string& key) {
+template <typename ValueType, typename AdapterType>
+struct Serializer<std::vector<ValueType>, AdapterType> {
+  static void serialize(const void* value, AdapterType& adapter,
+                        typename AdapterType::NodeType node, const std::string& key) {
     const std::vector<ValueType>& vector = *static_cast<const std::vector<ValueType>*>(value);
-    auto* childNode = context.addChild(node, key);
-    context.setArray(childNode, vector.size());
+    auto* childNode = adapter.addChild(node, key);
+    adapter.setArray(childNode, vector.size());
     for (const auto& item : vector) {
-      Serializer<ValueType, ContextType>::serialize(&item, context,
-                                                    context.addArrayElement(childNode), "");
+      Serializer<ValueType, AdapterType>::serialize(&item, adapter,
+                                                    adapter.addArrayElement(childNode), "");
     }
   }
 
-  static void deserialize(void* value, ContextType& context, typename ContextType::NodeType node,
+  static void deserialize(void* value, AdapterType& adapter, typename AdapterType::NodeType node,
                           const std::string& key) {
-    auto* childNode = context.getChild(node, key);
-    if (childNode && context.isArray(childNode)) {
+    auto* childNode = adapter.getChild(node, key);
+    if (childNode && adapter.isArray(childNode)) {
       std::vector<ValueType>& vector = *static_cast<std::vector<ValueType>*>(value);
       vector.clear();
-      vector.resize(context.getArraySize(childNode));
+      vector.resize(adapter.getArraySize(childNode));
       for (size_t i = 0; i < vector.size(); ++i) {
-        auto* elementNode = context.getArrayElement(childNode, i);
-        Serializer<ValueType, ContextType>::deserialize(&vector[i], context, elementNode, "");
+        auto* elementNode = adapter.getArrayElement(childNode, i);
+        Serializer<ValueType, AdapterType>::deserialize(&vector[i], adapter, elementNode, "");
       }
     }
   }
 };
 
 // Nested types derived from Serializable
-template <typename ValueType, typename ContextType>
+template <typename ValueType, typename AdapterType>
 struct Serializer<
-    ValueType, ContextType,
-    std::enable_if_t<std::is_base_of_v<Serializable<ValueType, ContextType>, ValueType>>> {
-  static void serialize(const void* value, ContextType& context,
-                        typename ContextType::NodeType node, const std::string& key) {
-    auto* childNode = context.addChild(node, key);
-    context.setObject(childNode);
-    static_cast<const ValueType*>(value)->serialize(context, childNode);
+    ValueType, AdapterType,
+    std::enable_if_t<std::is_base_of_v<Serializable<ValueType, AdapterType>, ValueType>>> {
+  static void serialize(const void* value, AdapterType& adapter,
+                        typename AdapterType::NodeType node, const std::string& key) {
+    auto* childNode = adapter.addChild(node, key);
+    adapter.setObject(childNode);
+    static_cast<const ValueType*>(value)->serialize(adapter, childNode);
   }
-  static void deserialize(void* value, ContextType& context, typename ContextType::NodeType node,
+  static void deserialize(void* value, AdapterType& adapter, typename AdapterType::NodeType node,
                           const std::string& key) {
-    auto* childNode = context.getChild(node, key);
-    if (childNode && context.isObject(childNode)) {
-      static_cast<ValueType*>(value)->deserialize(context, childNode);
+    auto* childNode = adapter.getChild(node, key);
+    if (childNode && adapter.isObject(childNode)) {
+      static_cast<ValueType*>(value)->deserialize(adapter, childNode);
     }
   }
 };
@@ -253,7 +253,7 @@ struct Serializer<
 // Add Serializer specializations for external/sealed classes.
 //
 // Example:
-// SERIALIZABLE_TYPE(JsonContext, MySealedClass, name);
+// SERIALIZABLE_TYPE(JsonAdapter, MySealedClass, name);
 // ================================================================================================
 
 // --- Variadic Macro Utilities ---
@@ -284,37 +284,37 @@ struct Serializer<
 
 // Helper to generate deserialize body for a single field
 #define SERIALIZABLE_TYPE_DESERIALIZE_FIELD(field_name)                                     \
-  if (auto field_name##Node = context.getChild(childNode, #field_name); field_name##Node) { \
+  if (auto field_name##Node = adapter.getChild(childNode, #field_name); field_name##Node) { \
     result->field_name =                                                                    \
-        context.template getValue<decltype(result->field_name)>(field_name##Node);          \
+        adapter.template getValue<decltype(result->field_name)>(field_name##Node);          \
   }
 
 // Helper to generate serialize body for a single field
 #define SERIALIZABLE_TYPE_SERIALIZE_FIELD(field_name)                                        \
   {                                                                                          \
-    auto field_name##Node = context.addChild(childNode, #field_name);                        \
-    context.template setValue<decltype(obj->field_name)>(field_name##Node, obj->field_name); \
+    auto field_name##Node = adapter.addChild(childNode, #field_name);                        \
+    adapter.template setValue<decltype(obj->field_name)>(field_name##Node, obj->field_name); \
   }
 
 // --- Main Macro Implementation ---
 
 // Single unified macro implementation - no more duplication!
 // Handles any number of fields using variadic FOR_EACH
-#define SERIALIZABLE_TYPE_IMPL(ContextType, Type, ...)                                     \
+#define SERIALIZABLE_TYPE_IMPL(AdapterType, Type, ...)                                     \
   template <>                                                                              \
-  struct Serializer<Type, ContextType> {                                                   \
-    static void serialize(const void* value, ContextType& context,                         \
-                          typename ContextType::NodeType node, const std::string& key) {   \
+  struct Serializer<Type, AdapterType> {                                                   \
+    static void serialize(const void* value, AdapterType& adapter,                         \
+                          typename AdapterType::NodeType node, const std::string& key) {   \
       const Type* obj = static_cast<const Type*>(value);                                   \
-      auto childNode = context.addChild(node, key);                                        \
-      context.setObject(childNode);                                                        \
+      auto childNode = adapter.addChild(node, key);                                        \
+      adapter.setObject(childNode);                                                        \
       SERIALIZABLE_FOR_EACH(SERIALIZABLE_TYPE_SERIALIZE_FIELD, __VA_ARGS__)                \
     }                                                                                      \
-    static void deserialize(void* value, ContextType& context,                             \
-                            typename ContextType::NodeType node, const std::string& key) { \
+    static void deserialize(void* value, AdapterType& adapter,                             \
+                            typename AdapterType::NodeType node, const std::string& key) { \
       Type* result = static_cast<Type*>(value);                                            \
-      auto childNode = context.getChild(node, key);                                        \
-      if (childNode && context.isObject(childNode)) {                                      \
+      auto childNode = adapter.getChild(node, key);                                        \
+      if (childNode && adapter.isObject(childNode)) {                                      \
         SERIALIZABLE_FOR_EACH(SERIALIZABLE_TYPE_DESERIALIZE_FIELD, __VA_ARGS__)            \
       }                                                                                    \
     }                                                                                      \
@@ -324,9 +324,9 @@ struct Serializer<
  * Add Serializer specializations for external/sealed classes.
  *
  * Example:
- * SERIALIZABLE_TYPE(JsonContext, MySealedClass, field1, field2, ...);
+ * SERIALIZABLE_TYPE(JsonAdapter, MySealedClass, field1, field2, ...);
  */
-#define SERIALIZABLE_TYPE(ContextType, Type, ...) \
-  SERIALIZABLE_TYPE_IMPL(ContextType, Type, __VA_ARGS__)
+#define SERIALIZABLE_TYPE(AdapterType, Type, ...) \
+  SERIALIZABLE_TYPE_IMPL(AdapterType, Type, __VA_ARGS__)
 
 }  // namespace lazy::serialization

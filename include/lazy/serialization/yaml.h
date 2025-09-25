@@ -14,10 +14,10 @@ namespace lazy {
 namespace serialization {
 
 /**
- * YAML serialization context implementation using yaml-cpp.
- * Provides the ContextType interface required by Serializable.
+ * YAML serialization adapter implementation using yaml-cpp.
+ * Provides the AdapterType interface required by Serializable.
  */
-class YamlContext {
+class YamlAdapter {
  private:
   YAML::Node document_;
   std::ostream* writeStream_ = nullptr;  // For serialization
@@ -28,12 +28,12 @@ class YamlContext {
  public:
   using NodeType = YAML::Node*;
 
-  YamlContext() { document_ = YAML::Node(YAML::NodeType::Map); }
+  YamlAdapter() { document_ = YAML::Node(YAML::NodeType::Map); }
 
-  explicit YamlContext(std::istream& stream) { document_ = YAML::Load(stream); }
+  explicit YamlAdapter(std::istream& stream) { document_ = YAML::Load(stream); }
 
   // For serialization - store stream reference
-  explicit YamlContext(std::ostream& stream) : writeStream_(&stream) {
+  explicit YamlAdapter(std::ostream& stream) : writeStream_(&stream) {
     document_ = YAML::Node(YAML::NodeType::Map);
   }
 
@@ -122,7 +122,7 @@ class YamlContext {
 
 // Convenience alias for YAML serializable types
 template <typename T>
-using YamlSerializable = Serializable<T, YamlContext>;
+using YamlSerializable = Serializable<T, YamlAdapter>;
 
 }  // namespace serialization
 

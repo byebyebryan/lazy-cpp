@@ -9,7 +9,7 @@
 // Test Classes and Setup
 // ================================================================================
 
-// Test classes using YamlContext
+// Test classes using YamlAdapter
 class YamlTestClass : public lazy::YamlSerializable<YamlTestClass> {
  public:
   SERIALIZABLE_FIELD(int, id, 1);
@@ -25,7 +25,7 @@ class YamlNestedClass : public lazy::YamlSerializable<YamlNestedClass> {
   SERIALIZABLE_FIELD(std::vector<int>, numbers);
 };
 
-// External class for testing SERIALIZABLE_TYPE with YamlContext
+// External class for testing SERIALIZABLE_TYPE with YamlAdapter
 class ExternalClass {
  public:
   std::string label = "external";
@@ -33,7 +33,7 @@ class ExternalClass {
 };
 
 namespace lazy::serialization {
-SERIALIZABLE_TYPE(YamlContext, ExternalClass, label, count)
+SERIALIZABLE_TYPE(YamlAdapter, ExternalClass, label, count)
 }
 
 class YamlTestWithExternal : public lazy::YamlSerializable<YamlTestWithExternal> {

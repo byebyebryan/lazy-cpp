@@ -16,10 +16,10 @@ namespace lazy {
 namespace serialization {
 
 /**
- * JSON serialization context implementation using RapidJSON.
- * Provides the ContextType interface required by Serializable.
+ * JSON serialization adapter implementation using RapidJSON.
+ * Provides the AdapterType interface required by Serializable.
  */
-class RapidJsonContext {
+class JsonAdapter {
  private:
   rapidjson::Document document_;
   std::ostream* writeStream_ = nullptr;  // For serialization
@@ -27,15 +27,15 @@ class RapidJsonContext {
  public:
   using NodeType = rapidjson::Value*;
 
-  RapidJsonContext() { document_.SetObject(); }
+  JsonAdapter() { document_.SetObject(); }
 
-  explicit RapidJsonContext(std::istream& stream) {
+  explicit JsonAdapter(std::istream& stream) {
     rapidjson::IStreamWrapper isw(stream);
     document_.ParseStream(isw);
   }
 
   // For serialization - store stream reference
-  explicit RapidJsonContext(std::ostream& stream) : writeStream_(&stream) { document_.SetObject(); }
+  explicit JsonAdapter(std::ostream& stream) : writeStream_(&stream) { document_.SetObject(); }
 
   // Clean finish methods for symmetric API
   void finishSerialization() const {
@@ -112,7 +112,7 @@ class RapidJsonContext {
 
 // Convenience alias for JSON serializable types
 template <typename T>
-using JsonSerializable = Serializable<T, RapidJsonContext>;
+using JsonSerializable = Serializable<T, JsonAdapter>;
 
 }  // namespace serialization
 

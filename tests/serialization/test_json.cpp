@@ -9,7 +9,7 @@
 // Test Classes and Setup
 // ================================================================================
 
-// Test classes using RapidJsonContext
+// Test classes using JsonAdapter
 class JsonTestClass : public lazy::JsonSerializable<JsonTestClass> {
  public:
   SERIALIZABLE_FIELD(int, id, 1);
@@ -25,7 +25,7 @@ class JsonNestedClass : public lazy::JsonSerializable<JsonNestedClass> {
   SERIALIZABLE_FIELD(std::vector<int>, numbers);
 };
 
-// External class for testing SERIALIZABLE_TYPE with RapidJsonContext
+// External class for testing SERIALIZABLE_TYPE with JsonAdapter
 class ExternalClass {
  public:
   std::string label = "external";
@@ -33,7 +33,7 @@ class ExternalClass {
 };
 
 namespace lazy::serialization {
-SERIALIZABLE_TYPE(RapidJsonContext, ExternalClass, label, count)
+SERIALIZABLE_TYPE(JsonAdapter, ExternalClass, label, count)
 }
 
 class JsonTestWithExternal : public lazy::JsonSerializable<JsonTestWithExternal> {
@@ -51,15 +51,15 @@ class JsonTestWithVectors : public lazy::JsonSerializable<JsonTestWithVectors> {
 };
 
 // ================================================================================
-// RapidJsonContext Unit Tests
+// JsonAdapter Unit Tests
 // ================================================================================
 
-class RapidJsonContextTest : public ::testing::Test {
+class JsonAdapterTest : public ::testing::Test {
  protected:
-  lazy::serialization::RapidJsonContext context;
+  lazy::serialization::JsonAdapter context;
 };
 
-TEST_F(RapidJsonContextTest, BasicNodeOperations) {
+TEST_F(JsonAdapterTest, BasicNodeOperations) {
   auto root = context.root();
   EXPECT_TRUE(context.isObject(root));
 
@@ -75,7 +75,7 @@ TEST_F(RapidJsonContextTest, BasicNodeOperations) {
   EXPECT_EQ(context.getValue<std::string>(child), "hello");
 }
 
-TEST_F(RapidJsonContextTest, ArrayOperations) {
+TEST_F(JsonAdapterTest, ArrayOperations) {
   auto root = context.root();
   auto arrayNode = context.addChild(root, "array_field");
 
@@ -100,9 +100,9 @@ TEST_F(RapidJsonContextTest, ArrayOperations) {
   EXPECT_EQ(context.getValue<int>(retrieved2), 20);
 }
 
-TEST_F(RapidJsonContextTest, StreamOperations) {
+TEST_F(JsonAdapterTest, StreamOperations) {
   std::ostringstream oss;
-  lazy::serialization::RapidJsonContext streamContext(oss);
+  lazy::serialization::JsonAdapter streamContext(oss);
   auto root = streamContext.root();
   auto child = streamContext.addChild(root, "stream_test");
   streamContext.setValue<std::string>(child, "stream_value");
@@ -117,7 +117,7 @@ TEST_F(RapidJsonContextTest, StreamOperations) {
 
   // Test parsing from stream
   std::istringstream iss(json);
-  lazy::serialization::RapidJsonContext context2(iss);
+  lazy::serialization::JsonAdapter context2(iss);
 
   auto root2 = context2.root();
   auto child2 = context2.getChild(root2, "stream_test");
@@ -125,7 +125,7 @@ TEST_F(RapidJsonContextTest, StreamOperations) {
   EXPECT_EQ(context2.getValue<std::string>(child2), "stream_value");
 }
 
-TEST_F(RapidJsonContextTest, EmptyKeyHandling) {
+TEST_F(JsonAdapterTest, EmptyKeyHandling) {
   auto root = context.root();
 
   // Empty key should return the node itself

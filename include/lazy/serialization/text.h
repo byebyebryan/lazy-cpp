@@ -12,8 +12,8 @@ namespace lazy {
 namespace serialization {
 
 /**
- * Text serialization context implementation using key-value pairs.
- * Provides the ContextType interface required by Serializable.
+ * Text serialization adapter implementation using key-value pairs.
+ * Provides the AdapterType interface required by Serializable.
  *
  * Format:
  * - Simple values: key = value
@@ -21,7 +21,7 @@ namespace serialization {
  * - Arrays: array.count = N, array.0 = value1, array.1 = value2, ...
  * - Strings are quoted, numbers/booleans are unquoted
  */
-class TextContext {
+class TextAdapter {
  private:
   // We need to store actual path strings and return pointers to them
   mutable std::map<std::string, std::string> nodeCache_;
@@ -34,9 +34,9 @@ class TextContext {
  public:
   using NodeType = const std::string*;
 
-  TextContext() = default;
+  TextAdapter() = default;
 
-  explicit TextContext(std::istream& stream) {
+  explicit TextAdapter(std::istream& stream) {
     std::string line;
     while (std::getline(stream, line)) {
       parseLine(line);
@@ -44,7 +44,7 @@ class TextContext {
   }
 
   // For serialization - write text directly to stream
-  explicit TextContext(std::ostream& stream) : writeStream_(&stream) {}
+  explicit TextAdapter(std::ostream& stream) : writeStream_(&stream) {}
 
   // Clean finish methods for symmetric API
   void finishSerialization() {
@@ -264,7 +264,7 @@ class TextContext {
 
 // Convenience alias for text serializable types
 template <typename T>
-using TextSerializable = Serializable<T, TextContext>;
+using TextSerializable = Serializable<T, TextAdapter>;
 
 }  // namespace serialization
 

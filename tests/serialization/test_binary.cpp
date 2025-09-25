@@ -41,7 +41,7 @@ class ExternalClass {
 };
 
 namespace lazy::serialization {
-SERIALIZABLE_TYPE(BinaryContext, ExternalClass, value, description, flag)
+SERIALIZABLE_TYPE(BinaryAdapter, ExternalClass, value, description, flag)
 }
 
 class BinaryClassWithExternal : public lazy::BinarySerializable<BinaryClassWithExternal> {
