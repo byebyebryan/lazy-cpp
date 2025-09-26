@@ -1,68 +1,78 @@
 # lazy-cpp
 
-A C++ library for automatic serialization with pluggable backends.
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://isocpp.org/)
+[![Header Only](https://img.shields.io/badge/header--only-yes-green.svg)]()
 
-## Quick Start
+A header-only C++ library for developers who want powerful features without the hassle. 
+
+Because life's too short for boilerplate code. ✨
+
+## 🎯 Serialization
+
+Serialize any class with a single macro per field - no boilerplate, no repetition!
 
 ```cpp
-#include "lazy/serialization/text.h"
-#include <iostream>
+#include "lazy/serialization/json.h"
+using namespace lazy::serialization;
 
-class Person : public lazy::TextSerializable<Person> {
-public:
-  SERIALIZABLE_FIELD(std::string, name, "John");
-  SERIALIZABLE_FIELD(int, age, 25);
+class Config : public LazyJsonSerializable<Config> {
+ public:
+  SERIALIZABLE_FIELD(std::string, name, "MyApp");
+  SERIALIZABLE_FIELD(int, port, 8080);
+  SERIALIZABLE_FIELD(bool, debug, false);
 };
 
-int main() {
-  Person person;
-  person.name = "Alice";
-  person.age = 30;
-  
-  person.serialize(std::cout);  // Outputs: name = "Alice", age = 30
-  return 0;
-}
+Config config;
+config.serialize(std::cout);  // That's it! 🎉
 ```
 
-## Features
+👉 **[Full serialization guide →](docs/serialization.md)**
 
-- **Text serialization**: Human-readable key-value format (no dependencies)
-- **Binary serialization**: Compact, endian-safe binary format (no dependencies)  
-- **JSON serialization**: JSON format via RapidJSON (optional component)
-- **YAML serialization**: YAML format via fkYAML (optional component)
-- **Header-only**: Easy to integrate
-- **Modern CMake**: Component-based package system
+## 📦 Installation
 
-## Building
+**Header-only** - just drop it in your project! 📁
 
-### Basic build (text + binary only):
 ```bash
-mkdir build && cd build
-cmake -DLAZY_BUILD_TESTS=OFF ..  # Disable tests for minimal build
-make
+git clone https://github.com/your-username/lazy-cpp.git
+# Copy include/lazy/ to your project
 ```
 
-### Development build (with all features and tests):
-```bash  
-mkdir build && cd build
-cmake ..  # Tests auto-enable JSON/YAML components
-make
-```
-
-### With optional components:
-```bash
-cmake -DLAZY_SERIALIZATION_JSON=ON -DLAZY_SERIALIZATION_YAML=ON ..
-make
-```
-
-### Using in your project:
+Or use CMake:
 ```cmake
-find_package(lazy-cpp REQUIRED COMPONENTS serialization)
-target_link_libraries(your_target lazy-cpp::serialization)
-
-# Or for JSON support:
-find_package(lazy-cpp REQUIRED COMPONENTS serialization-json)
-target_link_libraries(your_target lazy-cpp::serialization-json)
+find_package(lazy-cpp REQUIRED)
+target_link_libraries(your_target lazy-cpp::lazy-cpp)
 ```
 
-See [docs/BUILD_SYSTEM.md](docs/BUILD_SYSTEM.md) for detailed build and packaging information.
+## 🔨 Build Examples
+
+```bash
+./build.sh
+./build/examples/serializable-examples
+```
+
+## 📋 Requirements
+
+- C++17 or later
+- That's it! No external dependencies for core functionality
+- Optional: RapidJSON for RapidJSON support, fkYAML for YAML support
+
+## 🚀 What's Next?
+
+Serialization is just the beginning! More lazy modules coming soon... 🚀
+
+- **lazy/validation** - Schema validation made simple
+- **lazy/config** - Configuration management
+- **lazy/logging** - Because `std::cout` gets old
+
+## 🤝 Contributing
+
+Found a bug? Want a feature? PRs welcome! 🤝
+
+Just keep it simple, well-tested, and in the spirit of being lazy (in a good way).
+
+## 📜 License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+Because sharing is caring, and lawyers are scary. 📜✨
