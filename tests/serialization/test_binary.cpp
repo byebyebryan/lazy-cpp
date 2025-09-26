@@ -33,7 +33,7 @@ class ArrayBinaryClass : public lazy::BinarySerializable<ArrayBinaryClass> {
 };
 
 // External class for SERIALIZABLE_TYPE testing
-class ExternalClass {
+class BinaryExternalClass {
  public:
   int32_t value = 123;
   std::string description = "external";
@@ -41,12 +41,12 @@ class ExternalClass {
 };
 
 namespace lazy::serialization {
-SERIALIZABLE_TYPE(BinaryAdapter, ExternalClass, value, description, flag)
+SERIALIZABLE_TYPE(BinaryAdapter, BinaryExternalClass, value, description, flag)
 }
 
 class BinaryClassWithExternal : public lazy::BinarySerializable<BinaryClassWithExternal> {
  public:
-  SERIALIZABLE_FIELD(ExternalClass, externalField);
+  SERIALIZABLE_FIELD(BinaryExternalClass, externalField);
   SERIALIZABLE_FIELD(std::string, name, "with_external");
 };
 
@@ -411,6 +411,4 @@ TEST(BinarySerializationTest, CompactnessComparison) {
   // Binary should be quite compact
   EXPECT_LT(binarySize, 200u);  // Should be much smaller than text formats
   EXPECT_GT(binarySize, 20u);   // But not unreasonably small
-
-  std::cout << "Binary serialization size: " << binarySize << " bytes" << std::endl;
 }

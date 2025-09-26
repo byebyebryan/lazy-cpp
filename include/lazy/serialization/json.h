@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef LAZY_SERIALIZATION_JSON_ENABLED
+
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/ostreamwrapper.h>
@@ -101,7 +103,7 @@ class JsonAdapter {
   }
 
   template <typename T>
-  void setValue(NodeType node, T value) {
+  void setValue(NodeType node, const T& value) {
     if constexpr (std::is_same_v<T, std::string>) {
       node->SetString(value.c_str(), value.size(), getAllocator());
     } else {
@@ -121,3 +123,5 @@ template <typename T>
 using JsonSerializable = serialization::JsonSerializable<T>;
 
 }  // namespace lazy
+
+#endif  // LAZY_SERIALIZATION_JSON_ENABLED

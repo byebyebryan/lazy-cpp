@@ -26,19 +26,19 @@ class JsonNestedClass : public lazy::JsonSerializable<JsonNestedClass> {
 };
 
 // External class for testing SERIALIZABLE_TYPE with JsonAdapter
-class ExternalClass {
+class JsonExternalClass {
  public:
   std::string label = "external";
   int count = 0;
 };
 
 namespace lazy::serialization {
-SERIALIZABLE_TYPE(JsonAdapter, ExternalClass, label, count)
+SERIALIZABLE_TYPE(JsonAdapter, JsonExternalClass, label, count)
 }
 
 class JsonTestWithExternal : public lazy::JsonSerializable<JsonTestWithExternal> {
  public:
-  SERIALIZABLE_FIELD(ExternalClass, external);
+  SERIALIZABLE_FIELD(JsonExternalClass, external);
   SERIALIZABLE_FIELD(std::vector<std::string>, tags);
 };
 
@@ -46,7 +46,7 @@ class JsonTestWithExternal : public lazy::JsonSerializable<JsonTestWithExternal>
 class JsonTestWithVectors : public lazy::JsonSerializable<JsonTestWithVectors> {
  public:
   SERIALIZABLE_FIELD(std::vector<JsonTestClass>, nestedObjects);
-  SERIALIZABLE_FIELD(std::vector<ExternalClass>, customObjects);
+  SERIALIZABLE_FIELD(std::vector<JsonExternalClass>, customObjects);
   SERIALIZABLE_FIELD(std::string, name, "vector_test");
 };
 
@@ -326,11 +326,11 @@ TEST_F(JsonSerializableTest, VectorOfCustomObjects) {
   JsonTestWithVectors original;
 
   // Create custom objects
-  ExternalClass custom1;
+  JsonExternalClass custom1;
   custom1.label = "custom_one";
   custom1.count = 100;
 
-  ExternalClass custom2;
+  JsonExternalClass custom2;
   custom2.label = "custom_two";
   custom2.count = 200;
 
@@ -377,15 +377,15 @@ TEST_F(JsonSerializableTest, MixedComplexVectors) {
   original.nestedObjects = {nested};
 
   // Multiple custom objects
-  ExternalClass custom1;
+  JsonExternalClass custom1;
   custom1.label = "alpha";
   custom1.count = 1;
 
-  ExternalClass custom2;
+  JsonExternalClass custom2;
   custom2.label = "beta";
   custom2.count = 2;
 
-  ExternalClass custom3;
+  JsonExternalClass custom3;
   custom3.label = "gamma";
   custom3.count = 3;
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef LAZY_SERIALIZATION_YAML_ENABLED
+
 #include <deque>
 #include <fkYAML/node.hpp>
 #include <istream>
@@ -121,3 +123,5 @@ template <typename T>
 using YamlSerializable = serialization::YamlSerializable<T>;
 
 }  // namespace lazy
+
+#endif  // LAZY_SERIALIZATION_YAML_ENABLED

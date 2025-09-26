@@ -1,33 +1,44 @@
 # Examples CMakeLists.txt
 
-# Create examples for each serialization format
+# Create examples for available serialization formats
+set(EXAMPLE_TARGETS)
 
-# Text format example (default)
+# Text format example (always available - core functionality)
 add_executable(examples-text serializable_examples.cpp)
 target_compile_definitions(examples-text PRIVATE USE_TEXT)
-target_link_libraries(examples-text lazy-cpp)
+target_link_libraries(examples-text lazy-cpp::serialization)
+list(APPEND EXAMPLE_TARGETS examples-text)
 
-# JSON format example
-add_executable(examples-json serializable_examples.cpp)
-target_compile_definitions(examples-json PRIVATE USE_JSON)
-target_link_libraries(examples-json lazy-cpp)
-
-# Binary format example
+# Binary format example (always available - core functionality)
 add_executable(examples-binary serializable_examples.cpp)
 target_compile_definitions(examples-binary PRIVATE USE_BINARY)
-target_link_libraries(examples-binary lazy-cpp)
+target_link_libraries(examples-binary lazy-cpp::serialization)
+list(APPEND EXAMPLE_TARGETS examples-binary)
 
-# YAML format example (uses fkYAML header-only library)
-add_executable(examples-yaml serializable_examples.cpp)
-target_compile_definitions(examples-yaml PRIVATE USE_YAML)
-target_link_libraries(examples-yaml lazy-cpp)
+# JSON format example (only if JSON support is enabled)
+if(LAZY_SERIALIZATION_JSON)
+  add_executable(examples-json serializable_examples.cpp)
+  target_compile_definitions(examples-json PRIVATE USE_JSON)
+  target_link_libraries(examples-json lazy-cpp::serialization-json)
+  list(APPEND EXAMPLE_TARGETS examples-json)
+endif()
+
+# YAML format example (only if YAML support is enabled)
+if(LAZY_SERIALIZATION_YAML)
+  add_executable(examples-yaml serializable_examples.cpp)
+  target_compile_definitions(examples-yaml PRIVATE USE_YAML)
+  target_link_libraries(examples-yaml lazy-cpp::serialization-yaml)
+  list(APPEND EXAMPLE_TARGETS examples-yaml)
+endif()
 
 # Keep the original executable for backward compatibility (defaults to text)
 add_executable(serializable-examples serializable_examples.cpp)
-target_link_libraries(serializable-examples lazy-cpp)
+target_link_libraries(serializable-examples lazy-cpp::serialization)
+list(APPEND EXAMPLE_TARGETS serializable-examples)
 
 # Set output directory for all examples
-set_target_properties(
-  examples-text examples-json examples-binary examples-yaml
-  serializable-examples PROPERTIES RUNTIME_OUTPUT_DIRECTORY
-                                   ${CMAKE_BINARY_DIR}/examples)
+if(EXAMPLE_TARGETS)
+  set_target_properties(
+    ${EXAMPLE_TARGETS} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+                                  ${CMAKE_BINARY_DIR}/examples)
+endif()

@@ -1,5 +1,62 @@
 @PACKAGE_INIT@
 
+include(CMakeFindDependencyMacro)
+
+# Include the exported targets
 include("${CMAKE_CURRENT_LIST_DIR}/lazy-cpp-targets.cmake")
+
+# Available components
+set(lazy-cpp_KNOWN_COMPONENTS serialization serialization-json serialization-yaml)
+
+# Default to core serialization if no components specified
+if(NOT lazy-cpp_FIND_COMPONENTS)
+  set(lazy-cpp_FIND_COMPONENTS serialization)
+endif()
+
+# Validate requested components
+foreach(comp ${lazy-cpp_FIND_COMPONENTS})
+  if(NOT comp IN_LIST lazy-cpp_KNOWN_COMPONENTS)
+    set(lazy-cpp_FOUND FALSE)
+    set(lazy-cpp_NOT_FOUND_MESSAGE "Unknown component: ${comp}")
+  endif()
+endforeach()
+
+# Check for component availability and handle dependencies
+foreach(comp ${lazy-cpp_FIND_COMPONENTS})
+  if(comp STREQUAL "serialization")
+    # Core component - always available
+    set(lazy-cpp_${comp}_FOUND TRUE)
+  elseif(comp STREQUAL "serialization-json")
+    # Check if JSON target was built and is available
+    if(TARGET lazy-cpp::serialization-json)
+      set(lazy-cpp_${comp}_FOUND TRUE)
+      # JSON component depends on core serialization
+      if(NOT "serialization" IN_LIST lazy-cpp_FIND_COMPONENTS)
+        list(APPEND lazy-cpp_FIND_COMPONENTS serialization)
+      endif()
+    else()
+      set(lazy-cpp_${comp}_FOUND FALSE)
+      if(lazy-cpp_FIND_REQUIRED_${comp})
+        set(lazy-cpp_FOUND FALSE)
+        set(lazy-cpp_NOT_FOUND_MESSAGE "Component ${comp} not available. Enable with LAZY_SERIALIZATION_JSON=ON")
+      endif()
+    endif()
+  elseif(comp STREQUAL "serialization-yaml")
+    # Check if YAML target was built and is available
+    if(TARGET lazy-cpp::serialization-yaml)
+      set(lazy-cpp_${comp}_FOUND TRUE)
+      # YAML component depends on core serialization
+      if(NOT "serialization" IN_LIST lazy-cpp_FIND_COMPONENTS)
+        list(APPEND lazy-cpp_FIND_COMPONENTS serialization)
+      endif()
+    else()
+      set(lazy-cpp_${comp}_FOUND FALSE)
+      if(lazy-cpp_FIND_REQUIRED_${comp})
+        set(lazy-cpp_FOUND FALSE)
+        set(lazy-cpp_NOT_FOUND_MESSAGE "Component ${comp} not available. Enable with LAZY_SERIALIZATION_YAML=ON")
+      endif()
+    endif()
+  endif()
+endforeach()
 
 check_required_components(lazy-cpp)

@@ -30,7 +30,7 @@ class ArrayTextClass : public lazy::TextSerializable<ArrayTextClass> {
 };
 
 // External class for SERIALIZABLE_TYPE testing
-class ExternalClass {
+class TextExternalClass {
  public:
   int value = 123;
   std::string description = "external";
@@ -38,12 +38,12 @@ class ExternalClass {
 };
 
 namespace lazy::serialization {
-SERIALIZABLE_TYPE(TextAdapter, ExternalClass, value, description, flag)
+SERIALIZABLE_TYPE(TextAdapter, TextExternalClass, value, description, flag)
 }
 
 class TextClassWithExternal : public lazy::TextSerializable<TextClassWithExternal> {
  public:
-  SERIALIZABLE_FIELD(ExternalClass, externalField);
+  SERIALIZABLE_FIELD(TextExternalClass, externalField);
   SERIALIZABLE_FIELD(std::string, name, "with_external");
 };
 

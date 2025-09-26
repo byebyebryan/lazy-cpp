@@ -25,19 +25,19 @@ class YamlNestedClass : public lazy::YamlSerializable<YamlNestedClass> {
 };
 
 // External class for testing SERIALIZABLE_TYPE with YamlAdapter
-class ExternalClass {
+class YamlExternalClass {
  public:
   std::string label = "external";
   int count = 0;
 };
 
 namespace lazy::serialization {
-SERIALIZABLE_TYPE(YamlAdapter, ExternalClass, label, count)
+SERIALIZABLE_TYPE(YamlAdapter, YamlExternalClass, label, count)
 }
 
 class YamlTestWithExternal : public lazy::YamlSerializable<YamlTestWithExternal> {
  public:
-  SERIALIZABLE_FIELD(ExternalClass, external);
+  SERIALIZABLE_FIELD(YamlExternalClass, external);
   SERIALIZABLE_FIELD(std::vector<std::string>, tags);
 };
 
@@ -45,7 +45,7 @@ class YamlTestWithExternal : public lazy::YamlSerializable<YamlTestWithExternal>
 class YamlTestWithVectors : public lazy::YamlSerializable<YamlTestWithVectors> {
  public:
   SERIALIZABLE_FIELD(std::vector<YamlTestClass>, nestedObjects);
-  SERIALIZABLE_FIELD(std::vector<ExternalClass>, customObjects);
+  SERIALIZABLE_FIELD(std::vector<YamlExternalClass>, customObjects);
   SERIALIZABLE_FIELD(std::string, name, "vector_test");
 };
 
@@ -194,7 +194,7 @@ TEST(YamlSerializationTest, NestedObjectRoundTrip) {
   EXPECT_EQ(original.numbers, deserialized.numbers);
 }
 
-TEST(YamlSerializationTest, ExternalClassSerialization) {
+TEST(YamlSerializationTest, YamlExternalClassSerialization) {
   YamlTestWithExternal obj;
   obj.external.label = "test_label";
   obj.external.count = 42;
@@ -210,7 +210,7 @@ TEST(YamlSerializationTest, ExternalClassSerialization) {
   EXPECT_TRUE(yamlStr.find("tags:") != std::string::npos);
 }
 
-TEST(YamlSerializationTest, ExternalClassDeserialization) {
+TEST(YamlSerializationTest, YamlExternalClassDeserialization) {
   std::string yamlData = R"(
 external:
   label: "deserialized_label"
@@ -231,7 +231,7 @@ tags:
   EXPECT_EQ(obj.tags[1], "yaml_tag2");
 }
 
-TEST(YamlSerializationTest, ExternalClassRoundTrip) {
+TEST(YamlSerializationTest, YamlExternalClassRoundTrip) {
   YamlTestWithExternal original;
   original.external.label = "roundtrip_label";
   original.external.count = 123;
@@ -269,11 +269,11 @@ TEST(YamlSerializationTest, VectorOfObjectsSerialization) {
   obj.nestedObjects = {nested1, nested2};
 
   // Add custom objects
-  ExternalClass ext1;
+  YamlExternalClass ext1;
   ext1.label = "ext1";
   ext1.count = 10;
 
-  ExternalClass ext2;
+  YamlExternalClass ext2;
   ext2.label = "ext2";
   ext2.count = 20;
 
@@ -340,7 +340,7 @@ TEST(YamlSerializationTest, VectorOfObjectsRoundTrip) {
   nested.active = true;
   original.nestedObjects = {nested};
 
-  ExternalClass ext;
+  YamlExternalClass ext;
   ext.label = "rt_ext";
   ext.count = 777;
   original.customObjects = {ext};
