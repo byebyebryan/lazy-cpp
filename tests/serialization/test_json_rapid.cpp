@@ -3,14 +3,14 @@
 
 #include <sstream>
 
-#include "lazy/serialization/json.h"
+#include "lazy/serialization/json_rapid.h"
 
 // ================================================================================
 // Test Classes and Setup
 // ================================================================================
 
-// Test classes using JsonAdapter
-class JsonTestClass : public lazy::JsonSerializable<JsonTestClass> {
+// Test classes using RapidJsonAdapter
+class RapidJsonTestClass : public lazy::RapidJsonSerializable<RapidJsonTestClass> {
  public:
   SERIALIZABLE_FIELD(int, id, 1);
   SERIALIZABLE_FIELD(std::string, name, "test");
@@ -18,14 +18,14 @@ class JsonTestClass : public lazy::JsonSerializable<JsonTestClass> {
   SERIALIZABLE_FIELD(bool, active, true);
 };
 
-class JsonNestedClass : public lazy::JsonSerializable<JsonNestedClass> {
+class RapidJsonNestedClass : public lazy::RapidJsonSerializable<RapidJsonNestedClass> {
  public:
   SERIALIZABLE_FIELD(std::string, title, "parent");
-  SERIALIZABLE_FIELD(JsonTestClass, child);
+  SERIALIZABLE_FIELD(RapidJsonTestClass, child);
   SERIALIZABLE_FIELD(std::vector<int>, numbers);
 };
 
-// External class for testing SERIALIZABLE_TYPE with JsonAdapter
+// External class for testing SERIALIZABLE_TYPE with RapidJsonAdapter
 class JsonExternalClass {
  public:
   std::string label = "external";
@@ -33,33 +33,33 @@ class JsonExternalClass {
 };
 
 namespace lazy::serialization {
-SERIALIZABLE_TYPE(JsonAdapter, JsonExternalClass, label, count)
+SERIALIZABLE_TYPE(RapidJsonAdapter, JsonExternalClass, label, count)
 }
 
-class JsonTestWithExternal : public lazy::JsonSerializable<JsonTestWithExternal> {
+class RapidJsonTestWithExternal : public lazy::RapidJsonSerializable<RapidJsonTestWithExternal> {
  public:
   SERIALIZABLE_FIELD(JsonExternalClass, external);
   SERIALIZABLE_FIELD(std::vector<std::string>, tags);
 };
 
 // Additional test classes for vector of nested and custom types
-class JsonTestWithVectors : public lazy::JsonSerializable<JsonTestWithVectors> {
+class RapidJsonTestWithVectors : public lazy::RapidJsonSerializable<RapidJsonTestWithVectors> {
  public:
-  SERIALIZABLE_FIELD(std::vector<JsonTestClass>, nestedObjects);
+  SERIALIZABLE_FIELD(std::vector<RapidJsonTestClass>, nestedObjects);
   SERIALIZABLE_FIELD(std::vector<JsonExternalClass>, customObjects);
   SERIALIZABLE_FIELD(std::string, name, "vector_test");
 };
 
 // ================================================================================
-// JsonAdapter Unit Tests
+// RapidJsonAdapter Unit Tests
 // ================================================================================
 
-class JsonAdapterTest : public ::testing::Test {
+class RapidJsonAdapterTest : public ::testing::Test {
  protected:
-  lazy::serialization::JsonAdapter context;
+  lazy::serialization::RapidJsonAdapter context;
 };
 
-TEST_F(JsonAdapterTest, BasicNodeOperations) {
+TEST_F(RapidJsonAdapterTest, BasicNodeOperations) {
   auto root = context.root();
   EXPECT_TRUE(context.isObject(root));
 
@@ -75,7 +75,7 @@ TEST_F(JsonAdapterTest, BasicNodeOperations) {
   EXPECT_EQ(context.getValue<std::string>(child), "hello");
 }
 
-TEST_F(JsonAdapterTest, ArrayOperations) {
+TEST_F(RapidJsonAdapterTest, ArrayOperations) {
   auto root = context.root();
   auto arrayNode = context.addChild(root, "array_field");
 
@@ -100,9 +100,9 @@ TEST_F(JsonAdapterTest, ArrayOperations) {
   EXPECT_EQ(context.getValue<int>(retrieved2), 20);
 }
 
-TEST_F(JsonAdapterTest, StreamOperations) {
+TEST_F(RapidJsonAdapterTest, StreamOperations) {
   std::ostringstream oss;
-  lazy::serialization::JsonAdapter streamContext(oss);
+  lazy::serialization::RapidJsonAdapter streamContext(oss);
   auto root = streamContext.root();
   auto child = streamContext.addChild(root, "stream_test");
   streamContext.setValue<std::string>(child, "stream_value");
@@ -117,7 +117,7 @@ TEST_F(JsonAdapterTest, StreamOperations) {
 
   // Test parsing from stream
   std::istringstream iss(json);
-  lazy::serialization::JsonAdapter context2(iss);
+  lazy::serialization::RapidJsonAdapter context2(iss);
 
   auto root2 = context2.root();
   auto child2 = context2.getChild(root2, "stream_test");
@@ -125,7 +125,7 @@ TEST_F(JsonAdapterTest, StreamOperations) {
   EXPECT_EQ(context2.getValue<std::string>(child2), "stream_value");
 }
 
-TEST_F(JsonAdapterTest, EmptyKeyHandling) {
+TEST_F(RapidJsonAdapterTest, EmptyKeyHandling) {
   auto root = context.root();
 
   // Empty key should return the node itself
@@ -137,7 +137,7 @@ TEST_F(JsonAdapterTest, EmptyKeyHandling) {
 // JSON Serialization Integration Tests
 // ================================================================================
 
-class JsonSerializableTest : public ::testing::Test {
+class RapidJsonSerializableTest : public ::testing::Test {
  protected:
   template <typename T>
   std::string serialize(const T& obj) {
@@ -157,8 +157,8 @@ class JsonSerializableTest : public ::testing::Test {
 
 // --- Basic Serialization Tests ---
 
-TEST_F(JsonSerializableTest, BasicSerializationDeserialization) {
-  JsonTestClass original;
+TEST_F(RapidJsonSerializableTest, BasicSerializationDeserialization) {
+  RapidJsonTestClass original;
   original.id = 42;
   original.name = "hello";
   original.score = 95.5;
@@ -167,7 +167,7 @@ TEST_F(JsonSerializableTest, BasicSerializationDeserialization) {
   std::string json = serialize(original);
   EXPECT_FALSE(json.empty());
 
-  JsonTestClass deserialized = deserialize<JsonTestClass>(json);
+  RapidJsonTestClass deserialized = deserialize<RapidJsonTestClass>(json);
 
   EXPECT_EQ(deserialized.id, 42);
   EXPECT_EQ(deserialized.name, "hello");
@@ -175,11 +175,11 @@ TEST_F(JsonSerializableTest, BasicSerializationDeserialization) {
   EXPECT_EQ(deserialized.active, false);
 }
 
-TEST_F(JsonSerializableTest, DefaultValues) {
-  JsonTestClass obj;  // Uses default values
+TEST_F(RapidJsonSerializableTest, DefaultValues) {
+  RapidJsonTestClass obj;  // Uses default values
 
   std::string json = serialize(obj);
-  JsonTestClass deserialized = deserialize<JsonTestClass>(json);
+  RapidJsonTestClass deserialized = deserialize<RapidJsonTestClass>(json);
 
   EXPECT_EQ(deserialized.id, 1);
   EXPECT_EQ(deserialized.name, "test");
@@ -189,8 +189,8 @@ TEST_F(JsonSerializableTest, DefaultValues) {
 
 // --- Nested Object Tests ---
 
-TEST_F(JsonSerializableTest, NestedObjectSerialization) {
-  JsonNestedClass original;
+TEST_F(RapidJsonSerializableTest, NestedObjectSerialization) {
+  RapidJsonNestedClass original;
   original.title = "parent_obj";
   original.child.id = 100;
   original.child.name = "child_obj";
@@ -198,7 +198,7 @@ TEST_F(JsonSerializableTest, NestedObjectSerialization) {
   original.numbers = {1, 2, 3, 4, 5};
 
   std::string json = serialize(original);
-  JsonNestedClass deserialized = deserialize<JsonNestedClass>(json);
+  RapidJsonNestedClass deserialized = deserialize<RapidJsonNestedClass>(json);
 
   EXPECT_EQ(deserialized.title, "parent_obj");
   EXPECT_EQ(deserialized.child.id, 100);
@@ -209,12 +209,12 @@ TEST_F(JsonSerializableTest, NestedObjectSerialization) {
 
 // --- Simple Vector Tests ---
 
-TEST_F(JsonSerializableTest, VectorSerialization) {
-  JsonNestedClass obj;
+TEST_F(RapidJsonSerializableTest, VectorSerialization) {
+  RapidJsonNestedClass obj;
   obj.numbers = {10, 20, 30};
 
   std::string json = serialize(obj);
-  JsonNestedClass deserialized = deserialize<JsonNestedClass>(json);
+  RapidJsonNestedClass deserialized = deserialize<RapidJsonNestedClass>(json);
 
   EXPECT_EQ(deserialized.numbers.size(), 3);
   EXPECT_EQ(deserialized.numbers[0], 10);
@@ -224,14 +224,14 @@ TEST_F(JsonSerializableTest, VectorSerialization) {
 
 // --- External Class Tests ---
 
-TEST_F(JsonSerializableTest, ExternalClassSerialization) {
-  JsonTestWithExternal original;
+TEST_F(RapidJsonSerializableTest, ExternalClassSerialization) {
+  RapidJsonTestWithExternal original;
   original.external.label = "custom_label";
   original.external.count = 999;
   original.tags = {"tag1", "tag2", "tag3"};
 
   std::string json = serialize(original);
-  JsonTestWithExternal deserialized = deserialize<JsonTestWithExternal>(json);
+  RapidJsonTestWithExternal deserialized = deserialize<RapidJsonTestWithExternal>(json);
 
   EXPECT_EQ(deserialized.external.label, "custom_label");
   EXPECT_EQ(deserialized.external.count, 999);
@@ -243,18 +243,18 @@ TEST_F(JsonSerializableTest, ExternalClassSerialization) {
 
 // --- Edge Cases and Validation Tests ---
 
-TEST_F(JsonSerializableTest, EmptyVectorSerialization) {
-  JsonTestWithExternal obj;
+TEST_F(RapidJsonSerializableTest, EmptyVectorSerialization) {
+  RapidJsonTestWithExternal obj;
   obj.tags.clear();  // Empty vector
 
   std::string json = serialize(obj);
-  JsonTestWithExternal deserialized = deserialize<JsonTestWithExternal>(json);
+  RapidJsonTestWithExternal deserialized = deserialize<RapidJsonTestWithExternal>(json);
 
   EXPECT_TRUE(deserialized.tags.empty());
 }
 
-TEST_F(JsonSerializableTest, JsonValidityCheck) {
-  JsonTestClass obj;
+TEST_F(RapidJsonSerializableTest, JsonValidityCheck) {
+  RapidJsonTestClass obj;
   obj.id = 123;
   obj.name = "json_test";
 
@@ -272,11 +272,11 @@ TEST_F(JsonSerializableTest, JsonValidityCheck) {
   EXPECT_EQ(std::string(doc["name"].GetString()), "json_test");
 }
 
-TEST_F(JsonSerializableTest, PartialDeserialization) {
+TEST_F(RapidJsonSerializableTest, PartialDeserialization) {
   // Test deserialization when some fields are missing from JSON
   std::string partialJson = R"({"id": 42, "name": "partial"})";
 
-  JsonTestClass obj = deserialize<JsonTestClass>(partialJson);
+  RapidJsonTestClass obj = deserialize<RapidJsonTestClass>(partialJson);
 
   EXPECT_EQ(obj.id, 42);
   EXPECT_EQ(obj.name, "partial");
@@ -286,17 +286,17 @@ TEST_F(JsonSerializableTest, PartialDeserialization) {
 
 // --- Complex Vector Tests ---
 
-TEST_F(JsonSerializableTest, VectorOfNestedObjects) {
-  JsonTestWithVectors original;
+TEST_F(RapidJsonSerializableTest, VectorOfNestedObjects) {
+  RapidJsonTestWithVectors original;
 
   // Create nested objects
-  JsonTestClass obj1;
+  RapidJsonTestClass obj1;
   obj1.id = 1;
   obj1.name = "first";
   obj1.score = 10.5;
   obj1.active = true;
 
-  JsonTestClass obj2;
+  RapidJsonTestClass obj2;
   obj2.id = 2;
   obj2.name = "second";
   obj2.score = 20.5;
@@ -306,7 +306,7 @@ TEST_F(JsonSerializableTest, VectorOfNestedObjects) {
   original.name = "nested_vector_test";
 
   std::string json = serialize(original);
-  JsonTestWithVectors deserialized = deserialize<JsonTestWithVectors>(json);
+  RapidJsonTestWithVectors deserialized = deserialize<RapidJsonTestWithVectors>(json);
 
   EXPECT_EQ(deserialized.name, "nested_vector_test");
   EXPECT_EQ(deserialized.nestedObjects.size(), 2);
@@ -322,8 +322,8 @@ TEST_F(JsonSerializableTest, VectorOfNestedObjects) {
   EXPECT_EQ(deserialized.nestedObjects[1].active, false);
 }
 
-TEST_F(JsonSerializableTest, VectorOfCustomObjects) {
-  JsonTestWithVectors original;
+TEST_F(RapidJsonSerializableTest, VectorOfCustomObjects) {
+  RapidJsonTestWithVectors original;
 
   // Create custom objects
   JsonExternalClass custom1;
@@ -338,7 +338,7 @@ TEST_F(JsonSerializableTest, VectorOfCustomObjects) {
   original.name = "custom_vector_test";
 
   std::string json = serialize(original);
-  JsonTestWithVectors deserialized = deserialize<JsonTestWithVectors>(json);
+  RapidJsonTestWithVectors deserialized = deserialize<RapidJsonTestWithVectors>(json);
 
   EXPECT_EQ(deserialized.name, "custom_vector_test");
   EXPECT_EQ(deserialized.customObjects.size(), 2);
@@ -350,26 +350,26 @@ TEST_F(JsonSerializableTest, VectorOfCustomObjects) {
   EXPECT_EQ(deserialized.customObjects[1].count, 200);
 }
 
-TEST_F(JsonSerializableTest, EmptyVectorsOfComplexTypes) {
-  JsonTestWithVectors obj;
+TEST_F(RapidJsonSerializableTest, EmptyVectorsOfComplexTypes) {
+  RapidJsonTestWithVectors obj;
   // Keep vectors empty
   obj.nestedObjects.clear();
   obj.customObjects.clear();
   obj.name = "empty_vectors_test";
 
   std::string json = serialize(obj);
-  JsonTestWithVectors deserialized = deserialize<JsonTestWithVectors>(json);
+  RapidJsonTestWithVectors deserialized = deserialize<RapidJsonTestWithVectors>(json);
 
   EXPECT_EQ(deserialized.name, "empty_vectors_test");
   EXPECT_TRUE(deserialized.nestedObjects.empty());
   EXPECT_TRUE(deserialized.customObjects.empty());
 }
 
-TEST_F(JsonSerializableTest, MixedComplexVectors) {
-  JsonTestWithVectors original;
+TEST_F(RapidJsonSerializableTest, MixedComplexVectors) {
+  RapidJsonTestWithVectors original;
 
   // Single nested object
-  JsonTestClass nested;
+  RapidJsonTestClass nested;
   nested.id = 42;
   nested.name = "mixed_test";
   nested.score = 3.14;
@@ -393,7 +393,7 @@ TEST_F(JsonSerializableTest, MixedComplexVectors) {
   original.name = "mixed_complex_test";
 
   std::string json = serialize(original);
-  JsonTestWithVectors deserialized = deserialize<JsonTestWithVectors>(json);
+  RapidJsonTestWithVectors deserialized = deserialize<RapidJsonTestWithVectors>(json);
 
   // Verify nested objects vector
   EXPECT_EQ(deserialized.nestedObjects.size(), 1);

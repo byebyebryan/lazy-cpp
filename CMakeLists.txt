@@ -6,25 +6,25 @@ project(
   LANGUAGES CXX)
 
 # Options for optional components
-option(LAZY_SERIALIZATION_JSON "Enable JSON serialization support" OFF)
 option(LAZY_SERIALIZATION_YAML "Enable YAML serialization support" OFF)
+option(LAZY_SERIALIZATION_RAPID_JSON
+       "Enable RapidJSON backend for JSON serialization" OFF)
 option(LAZY_BUILD_EXAMPLES "Build examples" ON)
 option(LAZY_BUILD_TESTS "Build tests" ON)
 
-# Auto-enable JSON/YAML when building tests (since tests exercise all
-# functionality)
+# Auto-enable YAML when building tests (lazy JSON is always available)
 if(LAZY_BUILD_TESTS)
-  if(NOT LAZY_SERIALIZATION_JSON)
-    message(STATUS "Auto-enabling JSON support for tests")
-    set(LAZY_SERIALIZATION_JSON
-        ON
-        CACHE BOOL "Enable JSON serialization support" FORCE)
-  endif()
   if(NOT LAZY_SERIALIZATION_YAML)
     message(STATUS "Auto-enabling YAML support for tests")
     set(LAZY_SERIALIZATION_YAML
         ON
         CACHE BOOL "Enable YAML serialization support" FORCE)
+  endif()
+  if(NOT LAZY_SERIALIZATION_RAPID_JSON)
+    message(STATUS "Auto-enabling RapidJSON support for tests")
+    set(LAZY_SERIALIZATION_RAPID_JSON
+        ON
+        CACHE BOOL "Enable RapidJSON serialization support" FORCE)
   endif()
 endif()
 
@@ -35,7 +35,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Export compile commands for IDE support
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Core serialization library (text + binary support)
+# Core serialization library (text + binary + lazy JSON support)
 add_library(lazy-cpp-serialization INTERFACE)
 add_library(lazy-cpp::serialization ALIAS lazy-cpp-serialization)
 
@@ -46,8 +46,16 @@ target_include_directories(
 
 target_compile_features(lazy-cpp-serialization INTERFACE cxx_std_17)
 
-# Optional JSON support
-if(LAZY_SERIALIZATION_JSON)
+message(
+  STATUS "Built-in LazyJsonAdapter always available via lazy-cpp::serialization"
+)
+
+# Optional RapidJSON support
+if(LAZY_SERIALIZATION_RAPID_JSON)
+  include(FetchContent)
+
+  message(STATUS "Enabling RapidJSON backend for JSON serialization")
+
   # Try to find RapidJSON via pkg-config first
   find_package(PkgConfig QUIET)
   if(PKG_CONFIG_FOUND)
@@ -56,8 +64,6 @@ if(LAZY_SERIALIZATION_JSON)
 
   # If not found, use FetchContent
   if(NOT RapidJSON_FOUND)
-    include(FetchContent)
-
     FetchContent_Declare(
       rapidjson
       GIT_REPOSITORY https://github.com/Tencent/rapidjson.git
@@ -68,16 +74,17 @@ if(LAZY_SERIALIZATION_JSON)
     set(RapidJSON_INCLUDE_DIRS ${rapidjson_SOURCE_DIR}/include)
   endif()
 
-  # Create JSON component target
-  add_library(lazy-cpp-serialization-json INTERFACE)
-  add_library(lazy-cpp::serialization-json ALIAS lazy-cpp-serialization-json)
+  # Create RapidJSON component target
+  add_library(lazy-cpp-serialization-rapid-json INTERFACE)
+  add_library(lazy-cpp::serialization-rapid-json ALIAS
+              lazy-cpp-serialization-rapid-json)
 
-  target_link_libraries(lazy-cpp-serialization-json
+  target_link_libraries(lazy-cpp-serialization-rapid-json
                         INTERFACE lazy-cpp::serialization)
-  target_include_directories(lazy-cpp-serialization-json
+  target_include_directories(lazy-cpp-serialization-rapid-json
                              INTERFACE ${RapidJSON_INCLUDE_DIRS})
-  target_compile_definitions(lazy-cpp-serialization-json
-                             INTERFACE LAZY_SERIALIZATION_JSON_ENABLED)
+  target_compile_definitions(lazy-cpp-serialization-rapid-json
+                             INTERFACE LAZY_SERIALIZATION_RAPID_JSON)
 endif()
 
 # Optional YAML support
@@ -121,8 +128,8 @@ include(GNUInstallDirs)
 # Collect all targets to export
 set(LAZY_TARGETS lazy-cpp-serialization)
 
-if(LAZY_SERIALIZATION_JSON)
-  list(APPEND LAZY_TARGETS lazy-cpp-serialization-json)
+if(LAZY_SERIALIZATION_RAPID_JSON)
+  list(APPEND LAZY_TARGETS lazy-cpp-serialization-rapid-json)
 endif()
 
 if(LAZY_SERIALIZATION_YAML)

@@ -1,11 +1,12 @@
 # Serialization tests
 
-# Base test sources (always available)
-set(TEST_SOURCES test_serializable.cpp test_text.cpp test_binary.cpp)
+# Base test sources (always available - includes lazy JSON)
+set(TEST_SOURCES test_serializable.cpp test_text.cpp test_binary.cpp
+                 test_json_lazy.cpp)
 
-# Add optional test sources based on enabled components
-if(LAZY_SERIALIZATION_JSON)
-  list(APPEND TEST_SOURCES test_json.cpp)
+# Add optional RapidJSON test sources
+if(LAZY_SERIALIZATION_RAPID_JSON)
+  list(APPEND TEST_SOURCES test_json_rapid.cpp)
 endif()
 
 if(LAZY_SERIALIZATION_YAML)
@@ -15,14 +16,14 @@ endif()
 # Create test executable
 add_executable(serialization-tests ${TEST_SOURCES})
 
-# Base linking (always link core serialization and GTest)
+# Base linking (core serialization includes lazy JSON + GTest)
 target_link_libraries(serialization-tests PRIVATE lazy-cpp::serialization
                                                   GTest::gtest_main)
 
 # Add optional component links
-if(LAZY_SERIALIZATION_JSON)
+if(LAZY_SERIALIZATION_RAPID_JSON)
   target_link_libraries(serialization-tests
-                        PRIVATE lazy-cpp::serialization-json)
+                        PRIVATE lazy-cpp::serialization-rapid-json)
 endif()
 
 if(LAZY_SERIALIZATION_YAML)
