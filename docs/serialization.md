@@ -157,6 +157,37 @@ data.serialize<BinaryAdapter>(binStream);
 | **JSON (RapidJSON)** | `json_rapid.h` | `RapidJsonSerializable<T>` | RapidJSON |
 | **YAML** | `yaml.h` | `YamlSerializable<T>` | fkYAML |
 
+### 🔌 Setting Up Optional Dependencies
+
+**The lazy way (recommended):** Let CMake handle everything! 🪄
+
+```cmake
+find_package(lazy-cpp REQUIRED COMPONENTS 
+  serialization                    # Always available (Text, Binary, LazyJSON)
+  serialization-rapid-json         # Optional: RapidJSON support
+  serialization-yaml              # Optional: YAML support
+)
+
+target_link_libraries(your_target 
+  lazy-cpp::serialization
+  lazy-cpp::serialization-rapid-json  # Only if you need RapidJSON
+  lazy-cpp::serialization-yaml       # Only if you need YAML
+)
+```
+
+**That's it!** CMake automatically fetches RapidJSON and fkYAML for you. No manual installation needed! ✨
+
+**Then just include and use:**
+```cpp
+#include "lazy/serialization/json_rapid.h"  // RapidJsonAdapter
+#include "lazy/serialization/yaml.h"        // YAMLAdapter
+
+// or
+#include "lazy/serialization/multi_serializable.h" // RapidJsonAdapter and YAMLAdapter enabled!
+```
+
+**Manual installation:** If you prefer to manage dependencies yourself, you can still install RapidJSON/fkYAML manually and just use `lazy-cpp::serialization`.
+
 **Philosophy:** We're not trying to be everything to everyone. But we make it stupid easy to add your own! 🛠️
 
 ### Roll Your Own Adapter 🎲

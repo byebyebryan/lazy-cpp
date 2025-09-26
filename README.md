@@ -40,8 +40,12 @@ git clone https://github.com/your-username/lazy-cpp.git
 
 Or use CMake:
 ```cmake
-find_package(lazy-cpp REQUIRED)
-target_link_libraries(your_target lazy-cpp::lazy-cpp)
+find_package(lazy-cpp REQUIRED COMPONENTS serialization)
+target_link_libraries(your_target lazy-cpp::serialization)
+
+# Want optional formats? Just add the components:
+# serialization-rapid-json  # RapidJSON support (auto-fetched)
+# serialization-yaml       # YAML support (auto-fetched)
 ```
 
 ## 🔨 Build Examples
