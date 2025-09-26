@@ -1,8 +1,8 @@
 # Serialization tests
 
 # Base test sources (always available - includes lazy JSON)
-set(TEST_SOURCES test_serializable.cpp test_text.cpp test_binary.cpp
-                 test_json_lazy.cpp)
+set(TEST_SOURCES test_serializable.cpp test_multi_serializable.cpp
+                 test_text.cpp test_binary.cpp test_json_lazy.cpp)
 
 # Add optional RapidJSON test sources
 if(LAZY_SERIALIZATION_RAPID_JSON)

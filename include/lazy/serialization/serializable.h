@@ -324,7 +324,9 @@ struct Serializer<
  * Add Serializer specializations for external/sealed classes.
  *
  * Example:
- * SERIALIZABLE_TYPE(JsonAdapter, MySealedClass, field1, field2, ...);
+ * namespace lazy::serialization {
+ *   SERIALIZABLE_TYPE(JsonAdapter, MySealedClass, field1, field2, ...);
+ * }
  */
 #define SERIALIZABLE_TYPE(AdapterType, Type, ...) \
   SERIALIZABLE_TYPE_IMPL(AdapterType, Type, __VA_ARGS__)

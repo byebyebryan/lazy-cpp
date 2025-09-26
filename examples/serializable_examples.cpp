@@ -7,9 +7,10 @@
 using namespace lazy::serialization;
 
 // ================================================================================================
-// PART 1: TRADITIONAL SERIALIZABLE (Fixed adapter at compile time)
+// SERIALIZABLE (Fixed adapter at compile time)
 // ================================================================================================
 
+// TextSerializable = Serializable<T, TextAdapter>
 class SimpleClass : public TextSerializable<SimpleClass> {
  public:
   SERIALIZABLE_FIELD(std::string, name, "SimpleClass");
@@ -57,17 +58,19 @@ void serializableExample() {
   std::cout << serialOutput.str() << std::endl;
 
   // Round-trip test
-  std::cout << "🔄 Round-trip Test:" << std::endl;
+  std::cout << "\n🔄 Round-trip Test:" << std::endl;
   ComplexClass deserialized;
   std::istringstream deserialInput(serialOutput.str());
   deserialized.deserialize(deserialInput);
 
-  std::cout << "✅ Deserialized: title=" << deserialized.title << ", count=" << deserialized.count
-            << ", nested.name=" << deserialized.nested.name << std::endl;
+  std::cout << "✅ Deserialized: title=" << deserialized.title 
+            << "\n, count=" << deserialized.count
+            << "\n, nested.name=" << deserialized.nested.name
+            << "\n, sealed.category=" << deserialized.sealed.category << std::endl;
 }
 
 // ================================================================================================
-// PART 2: MULTI-SERIALIZABLE (Choose adapter at runtime)
+// MULTI-SERIALIZABLE (Choose adapter at runtime)
 // ================================================================================================
 
 class MultiSimpleClass : public MultiSerializable<MultiSimpleClass> {
@@ -76,12 +79,23 @@ class MultiSimpleClass : public MultiSerializable<MultiSimpleClass> {
   MULTI_SERIALIZABLE_FIELD(int, id, 100);
 };
 
+class MultiSealedClass {
+ public:
+  std::string category = "multi_sealed";
+  double value = 3.14;
+};
+
+namespace lazy::serialization {
+MULTI_SERIALIZABLE_TYPE(MultiSealedClass, category, value)
+}
+
 class MultiComplexClass : public MultiSerializable<MultiComplexClass> {
  public:
   MULTI_SERIALIZABLE_FIELD(std::string, name, "MultiDemo");
   MULTI_SERIALIZABLE_FIELD(int, score, 85);
   MULTI_SERIALIZABLE_FIELD(std::vector<int>, numbers);
   MULTI_SERIALIZABLE_FIELD(MultiSimpleClass, nested);
+  MULTI_SERIALIZABLE_FIELD(MultiSealedClass, sealed);
 };
 
 void multiSerializableExample() {
@@ -90,12 +104,14 @@ void multiSerializableExample() {
 
   MultiComplexClass multi;
   multi.name = "Multi Example";
-  multi.score = 95; 
+  multi.score = 95;
   multi.numbers = {10, 20, 30};
   multi.nested.name = "Nested Object";
   multi.nested.id = 200;
+  multi.sealed.category = "important";
+  multi.sealed.value = 99.9;
 
-  // Serialize with TextAdapter 
+  // Serialize with TextAdapter
   std::cout << "\n📝 TextAdapter:" << std::endl;
   std::ostringstream textStream;
   multi.serialize<TextAdapter>(textStream);
@@ -108,19 +124,17 @@ void multiSerializableExample() {
   std::cout << jsonStream.str() << std::endl;
 
   // Round-trip test with JSON
-  std::cout << "🔄 JSON Round-trip Test:" << std::endl;
+  std::cout << "\n🔄 JSON Round-trip Test:" << std::endl;
   MultiComplexClass jsonDeserialized;
   std::istringstream jsonInput(jsonStream.str());
   jsonDeserialized.deserialize<LazyJsonAdapter>(jsonInput);
 
   std::cout << "✅ Deserialized: name=" << jsonDeserialized.name
-            << ", score=" << jsonDeserialized.score
-            << ", nested.id=" << jsonDeserialized.nested.id << std::endl;
+            << "\n, score=" << jsonDeserialized.score
+            << "\n, nested.name=" << jsonDeserialized.nested.name
+            << "\n, sealed.category=" << jsonDeserialized.sealed.category << std::endl;
 
   std::cout << "\n🎉 All examples completed successfully!" << std::endl;
-  std::cout << "📚 Key differences:" << std::endl;
-  std::cout << "   • Serializable: Fixed adapter, compile-time binding" << std::endl;
-  std::cout << "   • MultiSerializable: Multiple adapters, runtime selection" << std::endl;
 }
 
 int main() {

@@ -243,13 +243,13 @@ std::vector<typename MultiSerializable<ConcreteT>::FieldMetadata>
  *
  * Now Product works with TextAdapter, BinaryAdapter, LazyJsonAdapter!
  */
-#define MULTI_SERIALIZABLE_TYPE(Type, ...)                                 \
-  /* Create SERIALIZABLE_TYPE specializations for all standard adapters */ \
-  SERIALIZABLE_TYPE(TextAdapter, Type, __VA_ARGS__)                        \
-  SERIALIZABLE_TYPE(BinaryAdapter, Type, __VA_ARGS__)                      \
-  SERIALIZABLE_TYPE(LazyJsonAdapter, Type, __VA_ARGS__)                    \
-  /* Optional adapters - only if enabled */                                \
-  LAZY_SERIALIZATION_RAPID_JSON_SERIALIZABLE_TYPE(Type, __VA_ARGS__)       \
+#define MULTI_SERIALIZABLE_TYPE(Type, ...)                                   \
+  /* Create SERIALIZABLE_TYPE specializations for all standard adapters */   \
+  SERIALIZABLE_TYPE(lazy::serialization::TextAdapter, Type, __VA_ARGS__)     \
+  SERIALIZABLE_TYPE(lazy::serialization::BinaryAdapter, Type, __VA_ARGS__)   \
+  SERIALIZABLE_TYPE(lazy::serialization::LazyJsonAdapter, Type, __VA_ARGS__) \
+  /* Optional adapters - only if enabled */                                  \
+  LAZY_SERIALIZATION_RAPID_JSON_SERIALIZABLE_TYPE(Type, __VA_ARGS__)         \
   LAZY_SERIALIZATION_YAML_SERIALIZABLE_TYPE(Type, __VA_ARGS__)
 
 /**
@@ -258,23 +258,24 @@ std::vector<typename MultiSerializable<ConcreteT>::FieldMetadata>
  * Call this once (e.g., in main()) for each MULTI_SERIALIZABLE_TYPE you want to use.
  * This registers the type with all available adapters.
  */
-#define REGISTER_MULTI_SERIALIZABLE_TYPE(Type)                                           \
-  do {                                                                                   \
-    static std::once_flag Type##_register_flag;                                          \
-    std::call_once(Type##_register_flag, []() { registerTypeWithAllAdapters<Type>(); }); \
+#define REGISTER_MULTI_SERIALIZABLE_TYPE(Type)                                          \
+  do {                                                                                  \
+    static std::once_flag Type##_register_flag;                                         \
+    std::call_once(Type##_register_flag,                                                \
+                   []() { lazy::serialization::registerTypeWithAllAdapters<Type>(); }); \
   } while (0)
 
 // Helper macros for optional adapters (expand only if enabled)
 #ifdef LAZY_SERIALIZATION_RAPID_JSON
 #define LAZY_SERIALIZATION_RAPID_JSON_SERIALIZABLE_TYPE(Type, ...) \
-  SERIALIZABLE_TYPE(RapidJsonAdapter, Type, __VA_ARGS__)
+  SERIALIZABLE_TYPE(lazy::serialization::RapidJsonAdapter, Type, __VA_ARGS__)
 #else
 #define LAZY_SERIALIZATION_RAPID_JSON_SERIALIZABLE_TYPE(Type, ...)
 #endif
 
 #ifdef LAZY_SERIALIZATION_YAML_ENABLED
 #define LAZY_SERIALIZATION_YAML_SERIALIZABLE_TYPE(Type, ...) \
-  SERIALIZABLE_TYPE(YamlAdapter, Type, __VA_ARGS__)
+  SERIALIZABLE_TYPE(lazy::serialization::YamlAdapter, Type, __VA_ARGS__)
 #else
 #define LAZY_SERIALIZATION_YAML_SERIALIZABLE_TYPE(Type, ...)
 #endif
@@ -293,7 +294,7 @@ std::vector<typename MultiSerializable<ConcreteT>::FieldMetadata>
             [](ConcreteType* obj) -> void* { return static_cast<void*>(&obj->name); }); \
         /* Only register non-MultiSerializable types to avoid static init issues */     \
         if constexpr (!std::is_base_of_v<MultiSerializable<type>, type>) {              \
-          registerTypeWithAllAdapters<type>();                                          \
+          lazy::serialization::registerTypeWithAllAdapters<type>();                     \
         }                                                                               \
       });                                                                               \
     }                                                                                   \

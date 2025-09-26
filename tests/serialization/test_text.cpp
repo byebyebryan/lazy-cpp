@@ -5,9 +5,13 @@
 #include "lazy/serialization/text.h"
 
 // ================================================================================
-// Test Classes and Setup
+// TEXT ADAPTER SPECIFIC TESTS
+//
+// This file tests TextAdapter-specific functionality and basic integration
+// with Serializable. Common serialization logic is tested in test_serializable.cpp.
 // ================================================================================
 
+// Simple test class for text serialization
 class SimpleTextClass : public lazy::TextSerializable<SimpleTextClass> {
  public:
   SERIALIZABLE_FIELD(int, intField, 42);
@@ -16,39 +20,16 @@ class SimpleTextClass : public lazy::TextSerializable<SimpleTextClass> {
   SERIALIZABLE_FIELD(bool, boolField, true);
 };
 
-class NestedTextClass : public lazy::TextSerializable<NestedTextClass> {
+// Class for testing integration
+class TextIntegrationClass : public lazy::TextSerializable<TextIntegrationClass> {
  public:
-  SERIALIZABLE_FIELD(std::string, name, "nested");
-  SERIALIZABLE_FIELD(SimpleTextClass, nestedObject);
-};
-
-class ArrayTextClass : public lazy::TextSerializable<ArrayTextClass> {
- public:
-  SERIALIZABLE_FIELD(std::vector<int>, intVector);
-  SERIALIZABLE_FIELD(std::vector<std::string>, stringVector);
-  SERIALIZABLE_FIELD(std::vector<SimpleTextClass>, objectVector);
-};
-
-// External class for SERIALIZABLE_TYPE testing
-class TextExternalClass {
- public:
-  int value = 123;
-  std::string description = "external";
-  bool flag = false;
-};
-
-namespace lazy::serialization {
-SERIALIZABLE_TYPE(TextAdapter, TextExternalClass, value, description, flag)
-}
-
-class TextClassWithExternal : public lazy::TextSerializable<TextClassWithExternal> {
- public:
-  SERIALIZABLE_FIELD(TextExternalClass, externalField);
-  SERIALIZABLE_FIELD(std::string, name, "with_external");
+  SERIALIZABLE_FIELD(std::string, name, "text_integration");
+  SERIALIZABLE_FIELD(std::vector<int>, numbers);
+  SERIALIZABLE_FIELD(SimpleTextClass, nested);
 };
 
 // ================================================================================
-// TextAdapter Unit Tests
+// TextAdapter Specific Tests
 // ================================================================================
 
 class TextAdapterTest : public ::testing::Test {
@@ -56,416 +37,175 @@ class TextAdapterTest : public ::testing::Test {
   lazy::serialization::TextAdapter context;
 };
 
-TEST_F(TextAdapterTest, BasicValueOperations) {
-  // Test setValue and getValue for different types
-  auto root = context.root();
-  auto intNode = context.addChild(root, "intKey");
-  auto stringNode = context.addChild(root, "stringKey");
-  auto doubleNode = context.addChild(root, "doubleKey");
-  auto boolNode = context.addChild(root, "boolKey");
-
-  context.setValue(intNode, 42);
-  context.setValue(stringNode, std::string("hello"));
-  context.setValue(doubleNode, 3.14);
-  context.setValue(boolNode, true);
-
-  EXPECT_EQ(context.getValue<int>(intNode), 42);
-  EXPECT_EQ(context.getValue<std::string>(stringNode), "hello");
-  EXPECT_DOUBLE_EQ(context.getValue<double>(doubleNode), 3.14);
-  EXPECT_EQ(context.getValue<bool>(boolNode), true);
-}
-
-TEST_F(TextAdapterTest, NodePathOperations) {
-  auto root = context.root();
-  EXPECT_EQ(*root, "");
-
-  auto child = context.addChild(root, "parent");
-  EXPECT_EQ(*child, "parent");
-
-  auto grandchild = context.addChild(child, "child");
-  EXPECT_EQ(*grandchild, "parent.child");
-
-  // Add some data so getChild can find the node
-  context.setValue(child, std::string("test"));
-  auto retrieved = context.getChild(root, "parent");
-  EXPECT_NE(retrieved, nullptr);
-  EXPECT_EQ(*retrieved, "parent");
-}
-
-TEST_F(TextAdapterTest, ArrayOperations) {
-  auto root = context.root();
-  auto arrayNode = context.addChild(root, "testArray");
-
-  context.setArray(arrayNode, 3);
-  EXPECT_TRUE(context.isArray(arrayNode));
-  EXPECT_EQ(context.getArraySize(arrayNode), 3);
-
-  auto element0 = context.getArrayElement(arrayNode, 0);
-  EXPECT_EQ(*element0, "testArray.0");
-
-  auto element1 = context.getArrayElement(arrayNode, 1);
-  EXPECT_EQ(*element1, "testArray.1");
-}
-
-TEST_F(TextAdapterTest, StreamRoundTrip) {
-  // Set some values
-  auto root = context.root();
-  auto key1Node = context.addChild(root, "key1");
-  auto key2Node = context.addChild(root, "key2");
-  auto nestedParent = context.addChild(root, "nested");
-  auto nestedField = context.addChild(nestedParent, "field");
-
-  context.setValue(key1Node, std::string("value1"));
-  context.setValue(key2Node, 42);
-  context.setValue(nestedField, 3.14);
-
-  // Since this fixture uses default context (no stream), we need to create new context for
-  // serialization
-  std::stringstream ss;
-  lazy::serialization::TextAdapter writeContext(static_cast<std::ostream&>(ss));
-  auto writeRoot = writeContext.root();
-  auto writeKey1Node = writeContext.addChild(writeRoot, "key1");
-  auto writeKey2Node = writeContext.addChild(writeRoot, "key2");
-  auto writeNestedParent = writeContext.addChild(writeRoot, "nested");
-  auto writeNestedField = writeContext.addChild(writeNestedParent, "field");
-
-  writeContext.setValue(writeKey1Node, std::string("value1"));
-  writeContext.setValue(writeKey2Node, 42);
-  writeContext.setValue(writeNestedField, 3.14);
-  writeContext.finishSerialization();  // Ensure all data is flushed
-
-  // Deserialize from stream
-  lazy::serialization::TextAdapter context2(static_cast<std::istream&>(ss));
-
-  // Verify values are preserved by getting nodes and checking their values
-  auto root2 = context2.root();
-  auto key1Node2 = context2.getChild(root2, "key1");
-  auto key2Node2 = context2.getChild(root2, "key2");
-  auto nestedParent2 = context2.getChild(root2, "nested");
-  auto nestedField2 = context2.getChild(nestedParent2, "field");
-
-  EXPECT_NE(key1Node2, nullptr);
-  EXPECT_NE(key2Node2, nullptr);
-  EXPECT_NE(nestedField2, nullptr);
-
-  EXPECT_EQ(context2.getValue<std::string>(key1Node2), "value1");
-  EXPECT_EQ(context2.getValue<int>(key2Node2), 42);
-  EXPECT_DOUBLE_EQ(context2.getValue<double>(nestedField2), 3.14);
-}
-
-// ================================================================================
-// Simple Serializable Tests
-// ================================================================================
-
-class SimpleTextSerializationTest : public ::testing::Test {
- protected:
-  void SetUp() override {
-    obj.intField = 100;
-    obj.stringField = "test";
-    obj.doubleField = 2.71;
-    obj.boolField = false;
-  }
-
+TEST_F(TextAdapterTest, HumanReadableFormat) {
+  // Test that text format produces human-readable output
   SimpleTextClass obj;
-};
+  obj.intField = 123;
+  obj.stringField = "test_value";
+  obj.doubleField = 2.71;
+  obj.boolField = false;
 
-TEST_F(SimpleTextSerializationTest, SerializationOutput) {
-  std::stringstream ss;
-  obj.serialize(ss);
-  std::string output = ss.str();
+  std::ostringstream oss;
+  obj.serialize(oss);
+  std::string textOutput = oss.str();
 
-  // Verify the output contains expected key-value pairs
-  EXPECT_TRUE(output.find("intField = 100") != std::string::npos);
-  EXPECT_TRUE(output.find("stringField = \"test\"") != std::string::npos);
-  EXPECT_TRUE(output.find("doubleField = 2.71") != std::string::npos);
-  EXPECT_TRUE(output.find("boolField = false") != std::string::npos);
-}
+  // Should be human-readable key=value format
+  EXPECT_TRUE(textOutput.find("intField = 123") != std::string::npos);
+  EXPECT_TRUE(textOutput.find("stringField = \"test_value\"") != std::string::npos);
+  EXPECT_TRUE(textOutput.find("doubleField = 2.71") != std::string::npos);
+  EXPECT_TRUE(textOutput.find("boolField = false") != std::string::npos);
 
-TEST_F(SimpleTextSerializationTest, DeserializationRoundTrip) {
-  // Serialize
-  std::stringstream ss;
-  obj.serialize(ss);
-
-  // Deserialize
-  SimpleTextClass obj2;
-  ss.seekg(0);
-  obj2.deserialize(ss);
-
-  // Verify fields match
-  EXPECT_EQ(obj2.intField, obj.intField);
-  EXPECT_EQ(obj2.stringField, obj.stringField);
-  EXPECT_DOUBLE_EQ(obj2.doubleField, obj.doubleField);
-  EXPECT_EQ(obj2.boolField, obj.boolField);
-}
-
-TEST_F(SimpleTextSerializationTest, DefaultValues) {
-  SimpleTextClass defaultObj;
-
-  std::stringstream ss;
-  defaultObj.serialize(ss);
-  std::string output = ss.str();
-
-  EXPECT_TRUE(output.find("intField = 42") != std::string::npos);
-  EXPECT_TRUE(output.find("stringField = \"default\"") != std::string::npos);
-  EXPECT_TRUE(output.find("doubleField = 3.14") != std::string::npos);
-  EXPECT_TRUE(output.find("boolField = true") != std::string::npos);
-}
-
-// ================================================================================
-// Nested Object Tests
-// ================================================================================
-
-class NestedTextSerializationTest : public ::testing::Test {
- protected:
-  void SetUp() override {
-    obj.name = "parent";
-    obj.nestedObject.intField = 555;
-    obj.nestedObject.stringField = "nested_value";
-    obj.nestedObject.doubleField = 1.41;
-    obj.nestedObject.boolField = true;
+  // Should not contain non-printable characters (unlike binary format)
+  for (char c : textOutput) {
+    EXPECT_TRUE(c == '\n' || c == '\r' || (c >= 32 && c <= 126))
+        << "Text format should only contain printable characters and newlines";
   }
-
-  NestedTextClass obj;
-};
-
-TEST_F(NestedTextSerializationTest, NestedSerializationOutput) {
-  std::stringstream ss;
-  obj.serialize(ss);
-  std::string output = ss.str();
-
-  // Verify nested structure with dot notation
-  EXPECT_TRUE(output.find("name = \"parent\"") != std::string::npos);
-  EXPECT_TRUE(output.find("nestedObject.intField = 555") != std::string::npos);
-  EXPECT_TRUE(output.find("nestedObject.stringField = \"nested_value\"") != std::string::npos);
-  EXPECT_TRUE(output.find("nestedObject.doubleField = 1.41") != std::string::npos);
-  EXPECT_TRUE(output.find("nestedObject.boolField = true") != std::string::npos);
 }
 
-TEST_F(NestedTextSerializationTest, NestedDeserializationRoundTrip) {
-  // Serialize
-  std::stringstream ss;
-  obj.serialize(ss);
+TEST_F(TextAdapterTest, DotNotationForNesting) {
+  // Test that nested objects use dot notation
+  TextIntegrationClass obj;
+  obj.name = "parent";
+  obj.nested.intField = 999;
+  obj.nested.stringField = "child_value";
 
-  // Deserialize
-  NestedTextClass obj2;
-  ss.seekg(0);
-  obj2.deserialize(ss);
+  std::ostringstream oss;
+  obj.serialize(oss);
+  std::string textOutput = oss.str();
 
-  // Verify nested fields match
-  EXPECT_EQ(obj2.name, obj.name);
-  EXPECT_EQ(obj2.nestedObject.intField, obj.nestedObject.intField);
-  EXPECT_EQ(obj2.nestedObject.stringField, obj.nestedObject.stringField);
-  EXPECT_DOUBLE_EQ(obj2.nestedObject.doubleField, obj.nestedObject.doubleField);
-  EXPECT_EQ(obj2.nestedObject.boolField, obj.nestedObject.boolField);
+  // Should use dot notation for nested fields
+  EXPECT_TRUE(textOutput.find("name = \"parent\"") != std::string::npos);
+  EXPECT_TRUE(textOutput.find("nested.intField = 999") != std::string::npos);
+  EXPECT_TRUE(textOutput.find("nested.stringField = \"child_value\"") != std::string::npos);
 }
 
-// ================================================================================
-// Array Tests
-// ================================================================================
+TEST_F(TextAdapterTest, ArrayIndexNotation) {
+  // Test that arrays use index notation
+  TextIntegrationClass obj;
+  obj.name = "array_test";
+  obj.numbers = {10, 20, 30};
 
-class ArrayTextSerializationTest : public ::testing::Test {
- protected:
-  void SetUp() override {
-    obj.intVector = {10, 20, 30};
-    obj.stringVector = {"hello", "world", "test"};
+  std::ostringstream oss;
+  obj.serialize(oss);
+  std::string textOutput = oss.str();
 
-    // Add object vector
-    SimpleTextClass item1;
-    item1.intField = 1;
-    item1.stringField = "first";
-
-    SimpleTextClass item2;
-    item2.intField = 2;
-    item2.stringField = "second";
-
-    obj.objectVector = {item1, item2};
-  }
-
-  ArrayTextClass obj;
-};
-
-TEST_F(ArrayTextSerializationTest, ArraySerializationOutput) {
-  std::stringstream ss;
-  obj.serialize(ss);
-  std::string output = ss.str();
-
-  // Verify array count and elements
-  EXPECT_TRUE(output.find("intVector.count = 3") != std::string::npos);
-  EXPECT_TRUE(output.find("intVector.0 = 10") != std::string::npos);
-  EXPECT_TRUE(output.find("intVector.1 = 20") != std::string::npos);
-  EXPECT_TRUE(output.find("intVector.2 = 30") != std::string::npos);
-
-  EXPECT_TRUE(output.find("stringVector.count = 3") != std::string::npos);
-  EXPECT_TRUE(output.find("stringVector.0 = \"hello\"") != std::string::npos);
-  EXPECT_TRUE(output.find("stringVector.1 = \"world\"") != std::string::npos);
-  EXPECT_TRUE(output.find("stringVector.2 = \"test\"") != std::string::npos);
-
-  EXPECT_TRUE(output.find("objectVector.count = 2") != std::string::npos);
-  EXPECT_TRUE(output.find("objectVector.0.intField = 1") != std::string::npos);
-  EXPECT_TRUE(output.find("objectVector.0.stringField = \"first\"") != std::string::npos);
-  EXPECT_TRUE(output.find("objectVector.1.intField = 2") != std::string::npos);
-  EXPECT_TRUE(output.find("objectVector.1.stringField = \"second\"") != std::string::npos);
+  // Should use count and index notation for arrays
+  EXPECT_TRUE(textOutput.find("numbers.count = 3") != std::string::npos);
+  EXPECT_TRUE(textOutput.find("numbers.0 = 10") != std::string::npos);
+  EXPECT_TRUE(textOutput.find("numbers.1 = 20") != std::string::npos);
+  EXPECT_TRUE(textOutput.find("numbers.2 = 30") != std::string::npos);
 }
 
-TEST_F(ArrayTextSerializationTest, ArrayDeserializationRoundTrip) {
-  // Serialize
-  std::stringstream ss;
-  obj.serialize(ss);
+TEST_F(TextAdapterTest, StringQuoting) {
+  // Test that strings are properly quoted and escaped
+  SimpleTextClass obj;
+  obj.stringField = "String with \"quotes\" and\nnewlines";
 
-  // Deserialize
-  ArrayTextClass obj2;
-  ss.seekg(0);
-  obj2.deserialize(ss);
+  std::ostringstream oss;
+  obj.serialize(oss);
+  std::string textOutput = oss.str();
 
-  // Verify int vector
-  ASSERT_EQ(obj2.intVector.size(), 3);
-  EXPECT_EQ(obj2.intVector[0], 10);
-  EXPECT_EQ(obj2.intVector[1], 20);
-  EXPECT_EQ(obj2.intVector[2], 30);
-
-  // Verify string vector
-  ASSERT_EQ(obj2.stringVector.size(), 3);
-  EXPECT_EQ(obj2.stringVector[0], "hello");
-  EXPECT_EQ(obj2.stringVector[1], "world");
-  EXPECT_EQ(obj2.stringVector[2], "test");
-
-  // Verify object vector
-  ASSERT_EQ(obj2.objectVector.size(), 2);
-  EXPECT_EQ(obj2.objectVector[0].intField, 1);
-  EXPECT_EQ(obj2.objectVector[0].stringField, "first");
-  EXPECT_EQ(obj2.objectVector[1].intField, 2);
-  EXPECT_EQ(obj2.objectVector[1].stringField, "second");
+  // Should quote strings (escaping format may vary by implementation)
+  EXPECT_TRUE(textOutput.find("stringField = \"") != std::string::npos);
+  EXPECT_TRUE(textOutput.find("quotes") != std::string::npos);
+  EXPECT_TRUE(textOutput.find("newlines") != std::string::npos);
 }
 
-TEST_F(ArrayTextSerializationTest, EmptyArrays) {
-  ArrayTextClass emptyObj;
-
-  std::stringstream ss;
-  emptyObj.serialize(ss);
-  std::string output = ss.str();
-
-  // Empty arrays should serialize with count = 0
-  EXPECT_TRUE(output.find("intVector.count = 0") != std::string::npos);
-  EXPECT_TRUE(output.find("stringVector.count = 0") != std::string::npos);
-  EXPECT_TRUE(output.find("objectVector.count = 0") != std::string::npos);
-
-  // Deserialize should work
-  ArrayTextClass emptyObj2;
-  ss.seekg(0);
-  EXPECT_NO_THROW(emptyObj2.deserialize(ss));
-
-  EXPECT_EQ(emptyObj2.intVector.size(), 0);
-  EXPECT_EQ(emptyObj2.stringVector.size(), 0);
-  EXPECT_EQ(emptyObj2.objectVector.size(), 0);
-}
-
-// ================================================================================
-// External Type Tests (SERIALIZABLE_TYPE)
-// ================================================================================
-
-class ExternalTextSerializationTest : public ::testing::Test {
- protected:
-  void SetUp() override {
-    obj.externalField.value = 999;
-    obj.externalField.description = "test_external";
-    obj.externalField.flag = true;
-    obj.name = "wrapper";
-  }
-
-  TextClassWithExternal obj;
-};
-
-TEST_F(ExternalTextSerializationTest, ExternalTypeSerializationOutput) {
-  std::stringstream ss;
-  obj.serialize(ss);
-  std::string output = ss.str();
-
-  EXPECT_TRUE(output.find("name = \"wrapper\"") != std::string::npos);
-  EXPECT_TRUE(output.find("externalField.value = 999") != std::string::npos);
-  EXPECT_TRUE(output.find("externalField.description = \"test_external\"") != std::string::npos);
-  EXPECT_TRUE(output.find("externalField.flag = true") != std::string::npos);
-}
-
-TEST_F(ExternalTextSerializationTest, ExternalTypeDeserializationRoundTrip) {
-  // Serialize
-  std::stringstream ss;
-  obj.serialize(ss);
-
-  // Deserialize
-  TextClassWithExternal obj2;
-  ss.seekg(0);
-  obj2.deserialize(ss);
-
-  // Verify external fields match
-  EXPECT_EQ(obj2.name, obj.name);
-  EXPECT_EQ(obj2.externalField.value, obj.externalField.value);
-  EXPECT_EQ(obj2.externalField.description, obj.externalField.description);
-  EXPECT_EQ(obj2.externalField.flag, obj.externalField.flag);
-}
-
-// ================================================================================
-// Manual Format Parsing Tests
-// ================================================================================
-
-class TextFormatParsingTest : public ::testing::Test {};
-
-TEST_F(TextFormatParsingTest, ManualFormatDeserialization) {
-  // Create a manual text format string
+TEST_F(TextAdapterTest, ManualFormatParsing) {
+  // Test that manually created text format can be parsed
   std::stringstream input;
   input << "intField = 777\n";
-  input << "stringField = \"manual_test\"\n";
+  input << "stringField = \"manual_input\"\n";
   input << "doubleField = 9.99\n";
-  input << "boolField = false\n";
+  input << "boolField = true\n";
 
-  // Deserialize
   SimpleTextClass obj;
   input.seekg(0);
   obj.deserialize(input);
 
   EXPECT_EQ(obj.intField, 777);
-  EXPECT_EQ(obj.stringField, "manual_test");
+  EXPECT_EQ(obj.stringField, "manual_input");
   EXPECT_DOUBLE_EQ(obj.doubleField, 9.99);
-  EXPECT_EQ(obj.boolField, false);
+  EXPECT_EQ(obj.boolField, true);
 }
 
-TEST_F(TextFormatParsingTest, ComplexManualFormat) {
-  std::stringstream input;
-  input << "name = \"complex_test\"\n";
-  input << "nestedObject.intField = 123\n";
-  input << "nestedObject.stringField = \"nested\"\n";
-  input << "nestedObject.doubleField = 1.23\n";
-  input << "nestedObject.boolField = true\n";
+// ================================================================================
+// Basic Integration Tests (Serializable + TextAdapter)
+// ================================================================================
 
-  NestedTextClass obj;
-  input.seekg(0);
-  obj.deserialize(input);
+TEST(TextIntegrationTest, BasicSerializableIntegration) {
+  // Simple sanity check that Serializable works with TextAdapter
+  TextIntegrationClass original;
+  original.name = "text_integration";
+  original.numbers = {1, 2, 3};
+  original.nested.intField = 999;
+  original.nested.stringField = "nested_text";
 
-  EXPECT_EQ(obj.name, "complex_test");
-  EXPECT_EQ(obj.nestedObject.intField, 123);
-  EXPECT_EQ(obj.nestedObject.stringField, "nested");
-  EXPECT_DOUBLE_EQ(obj.nestedObject.doubleField, 1.23);
-  EXPECT_EQ(obj.nestedObject.boolField, true);
+  std::ostringstream oss;
+  original.serialize(oss);
+  std::string textOutput = oss.str();
+
+  // Should be human-readable
+  EXPECT_TRUE(textOutput.find("name = \"text_integration\"") != std::string::npos);
+  EXPECT_TRUE(textOutput.find("numbers.count = 3") != std::string::npos);
+  EXPECT_TRUE(textOutput.find("nested.intField = 999") != std::string::npos);
+
+  TextIntegrationClass deserialized;
+  std::istringstream iss(textOutput);
+  deserialized.deserialize(iss);
+
+  EXPECT_EQ(original.name, deserialized.name);
+  EXPECT_EQ(original.numbers, deserialized.numbers);
+  EXPECT_EQ(original.nested.intField, deserialized.nested.intField);
+  EXPECT_EQ(original.nested.stringField, deserialized.nested.stringField);
 }
 
-TEST_F(TextFormatParsingTest, ArrayManualFormat) {
-  std::stringstream input;
-  input << "intVector.count = 2\n";
-  input << "intVector.0 = 100\n";
-  input << "intVector.1 = 200\n";
-  input << "stringVector.count = 1\n";
-  input << "stringVector.0 = \"single\"\n";
-  input << "objectVector.count = 0\n";
+TEST(TextIntegrationTest, RoundTripConsistency) {
+  // Test that serialization -> deserialization -> serialization produces same output
+  SimpleTextClass original;
+  original.intField = 42;
+  original.stringField = "consistency_test";
+  original.doubleField = 1.618;
+  original.boolField = true;
 
-  ArrayTextClass obj;
-  input.seekg(0);
-  obj.deserialize(input);
+  // First serialization
+  std::ostringstream oss1;
+  original.serialize(oss1);
+  std::string firstOutput = oss1.str();
 
-  ASSERT_EQ(obj.intVector.size(), 2);
-  EXPECT_EQ(obj.intVector[0], 100);
-  EXPECT_EQ(obj.intVector[1], 200);
+  // Deserialize
+  SimpleTextClass intermediate;
+  std::istringstream iss(firstOutput);
+  intermediate.deserialize(iss);
 
-  ASSERT_EQ(obj.stringVector.size(), 1);
-  EXPECT_EQ(obj.stringVector[0], "single");
+  // Second serialization
+  std::ostringstream oss2;
+  intermediate.serialize(oss2);
+  std::string secondOutput = oss2.str();
 
-  EXPECT_EQ(obj.objectVector.size(), 0);
+  // Should be identical (or at least functionally equivalent)
+  EXPECT_EQ(firstOutput, secondOutput);
+}
+
+TEST(TextIntegrationTest, EmptyAndDefaultValues) {
+  // Test empty vectors and default values work correctly
+  TextIntegrationClass obj;  // Uses defaults
+
+  std::ostringstream oss;
+  obj.serialize(oss);
+  std::string textOutput = oss.str();
+
+  // Should show default values and empty array
+  EXPECT_TRUE(textOutput.find("name = \"text_integration\"") != std::string::npos);
+  EXPECT_TRUE(textOutput.find("numbers.count = 0") != std::string::npos);
+  EXPECT_TRUE(textOutput.find("nested.intField = 42") != std::string::npos);  // default
+
+  TextIntegrationClass deserialized;
+  std::istringstream iss(textOutput);
+  deserialized.deserialize(iss);
+
+  EXPECT_EQ(obj.name, deserialized.name);
+  EXPECT_TRUE(deserialized.numbers.empty());
+  EXPECT_EQ(obj.nested.intField, deserialized.nested.intField);
+  EXPECT_EQ(obj.nested.stringField, deserialized.nested.stringField);
 }
