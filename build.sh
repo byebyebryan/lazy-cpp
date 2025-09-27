@@ -11,6 +11,7 @@ CLEAN=false
 FORMAT=false
 RUN_EXAMPLES=false
 RUN_TESTS=false
+RUN_BENCHMARKS=false
 VERBOSE=false
 BUILD_DIR="build"
 GENERATOR="Ninja"
@@ -37,6 +38,7 @@ Usage: $0 [OPTIONS]
 
 OPTIONS:
     -h, --help          Show this help message
+    -b, --benchmark     Build and run benchmarks (with organized results if Python available)
     -c, --clean         Clean build directory before building
     -d, --debug         Build in Debug mode (default: Release)
     -f, --format        Run clang-format on all source files
@@ -51,8 +53,9 @@ EXAMPLES:
     $0 -f               # Format code only
     $0 -c -r            # Clean build and run examples
     $0 -t               # Build and run tests
-    $0 -c -t -r         # Clean build, run tests and examples
-    $0 --format --clean --debug --test --run  # Full development cycle
+    $0 -b               # Build and run benchmarks
+    $0 -c -t -r -b      # Clean build, run tests, examples and benchmarks
+    $0 --format --clean --debug --test --run --benchmark  # Full development cycle
 
 EOF
 }
@@ -71,6 +74,7 @@ format_code() {
         $(find include -name "*.h" -o -name "*.hpp" -o -name "*.cpp" -o -name "*.cc" -o -name "*.cxx" 2>/dev/null || true)
         $(find examples -name "*.h" -o -name "*.hpp" -o -name "*.cpp" -o -name "*.cc" -o -name "*.cxx" 2>/dev/null || true)
         $(find tests -name "*.h" -o -name "*.hpp" -o -name "*.cpp" -o -name "*.cc" -o -name "*.cxx" 2>/dev/null || true)
+        $(find benchmarks -name "*.h" -o -name "*.hpp" -o -name "*.cpp" -o -name "*.cc" -o -name "*.cxx" 2>/dev/null || true)
     )
 
     if [ ${#SOURCE_FILES[@]} -eq 0 ]; then
@@ -113,6 +117,11 @@ build_project() {
         CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_VERBOSE_MAKEFILE=ON"
     fi
     
+    # Enable benchmarks if requested
+    if [ "$RUN_BENCHMARKS" = true ]; then
+        CMAKE_ARGS="$CMAKE_ARGS -DLAZY_BUILD_BENCHMARKS=ON"
+    fi
+    
     print_info "Configuring with CMake..."
     cmake -G "$GENERATOR" -DCMAKE_BUILD_TYPE="$BUILD_TYPE" $CMAKE_ARGS ..
     
@@ -130,15 +139,15 @@ build_project() {
 run_examples() {
     print_info "Running examples..."
 
-    if [ ! -f "$BUILD_DIR/examples/serializable-examples" ]; then
+    if [ ! -f "$BUILD_DIR/examples/serialization-examples" ]; then
         print_error "Example executable not found. Build the project first."
         return 1
     fi
 
-    print_info "Running serializable-examples:"
+    print_info "Running serialization-examples:"
     echo "----------------------------------------"
     cd "$BUILD_DIR"
-    ./examples/serializable-examples
+    ./examples/serialization-examples
     cd ..
     echo "----------------------------------------"
     print_success "Examples completed!"
@@ -162,12 +171,55 @@ run_tests() {
     print_success "Tests completed!"
 }
 
+# Function to run benchmarks
+run_benchmarks() {
+    print_info "Running benchmarks..."
+
+    if [ ! -f "$BUILD_DIR/benchmarks/serialization-benchmarks" ]; then
+        print_error "Benchmark executable not found. Build the project with benchmarks enabled first."
+        return 1
+    fi
+
+    print_info "Running serialization benchmarks:"
+    echo "========================================"
+    cd "$BUILD_DIR"
+    
+    # Check if Python is available for post-processing
+    PYTHON_CMD=""
+    if command -v python3 &> /dev/null; then
+        PYTHON_CMD="python3"
+    elif command -v python &> /dev/null; then
+        PYTHON_CMD="python"
+    fi
+    
+    if [ -n "$PYTHON_CMD" ] && [ -f "../benchmarks/serialization_analyze.py" ]; then
+        print_info "Running benchmarks with JSON output for post-processing..."
+        
+        # Run benchmarks with JSON output
+        ./benchmarks/serialization-benchmarks --benchmark_format=json --benchmark_out=benchmark_results.json
+        
+        print_info "Processing results for better readability..."
+        $PYTHON_CMD ../benchmarks/serialization_analyze.py benchmark_results.json
+    else
+        print_warning "Python not found or post-processor missing. Running with standard output..."
+        ./benchmarks/serialization-benchmarks
+    fi
+    
+    cd ..
+    echo "========================================"
+    print_success "Benchmarks completed!"
+}
+
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
         -h|--help)
             show_help
             exit 0
+            ;;
+        -b|--benchmark)
+            RUN_BENCHMARKS=true
+            shift
             ;;
         -c|--clean)
             CLEAN=true
@@ -214,7 +266,7 @@ if [ "$FORMAT" = true ]; then
 fi
 
 # If only formatting was requested, exit here
-if [ "$FORMAT" = true ] && [ "$CLEAN" = false ] && [ "$RUN_EXAMPLES" = false ] && [ "$RUN_TESTS" = false ] && [ "$BUILD_TYPE" = "Release" ]; then
+if [ "$FORMAT" = true ] && [ "$CLEAN" = false ] && [ "$RUN_EXAMPLES" = false ] && [ "$RUN_TESTS" = false ] && [ "$RUN_BENCHMARKS" = false ] && [ "$BUILD_TYPE" = "Release" ]; then
     print_success "Code formatting completed. Exiting."
     exit 0
 fi
@@ -235,6 +287,11 @@ fi
 # Run examples if requested
 if [ "$RUN_EXAMPLES" = true ]; then
     run_examples
+fi
+
+# Run benchmarks if requested
+if [ "$RUN_BENCHMARKS" = true ]; then
+    run_benchmarks
 fi
 
 print_success "All tasks completed successfully!"

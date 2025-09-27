@@ -11,6 +11,7 @@ option(LAZY_SERIALIZATION_RAPID_JSON
        "Enable RapidJSON backend for JSON serialization" OFF)
 option(LAZY_BUILD_EXAMPLES "Build examples" ON)
 option(LAZY_BUILD_TESTS "Build tests" ON)
+option(LAZY_BUILD_BENCHMARKS "Build benchmarks" OFF)
 
 # Auto-enable YAML when building tests (lazy JSON is always available)
 if(LAZY_BUILD_TESTS)
@@ -22,6 +23,22 @@ if(LAZY_BUILD_TESTS)
   endif()
   if(NOT LAZY_SERIALIZATION_RAPID_JSON)
     message(STATUS "Auto-enabling RapidJSON support for tests")
+    set(LAZY_SERIALIZATION_RAPID_JSON
+        ON
+        CACHE BOOL "Enable RapidJSON serialization support" FORCE)
+  endif()
+endif()
+
+# Auto-enable YAML and RapidJSON when building benchmarks
+if(LAZY_BUILD_BENCHMARKS)
+  if(NOT LAZY_SERIALIZATION_YAML)
+    message(STATUS "Auto-enabling YAML support for benchmarks")
+    set(LAZY_SERIALIZATION_YAML
+        ON
+        CACHE BOOL "Enable YAML serialization support" FORCE)
+  endif()
+  if(NOT LAZY_SERIALIZATION_RAPID_JSON)
+    message(STATUS "Auto-enabling RapidJSON support for benchmarks")
     set(LAZY_SERIALIZATION_RAPID_JSON
         ON
         CACHE BOOL "Enable RapidJSON serialization support" FORCE)
@@ -120,6 +137,11 @@ endif()
 if(LAZY_BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
+endif()
+
+# Build benchmarks if requested
+if(LAZY_BUILD_BENCHMARKS)
+  add_subdirectory(benchmarks)
 endif()
 
 # Installation and export
